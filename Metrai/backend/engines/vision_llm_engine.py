@@ -248,7 +248,7 @@ class VisionLLMEngine:
         image.save(buf, format="JPEG", quality=80)
         b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
         
         payload = {
             "contents": [{
@@ -272,7 +272,7 @@ class VisionLLMEngine:
         }
 
         logger.info("Sending request to Gemini API (raw REST)...")
-        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=60)
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
         
         if not resp.ok:
             logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
