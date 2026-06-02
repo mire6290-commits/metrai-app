@@ -1,0 +1,5 @@
+RewriteEngine On
+RewriteBase /metrai/
+
+# On envoie tout le trafic /metrai/ directement vers le port 8501
+RewriteRule ^(.*)$ [http://127.0.0.1:8501/$1](http://127.0.0.1:8501/$1) [P,L]

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Metrai Calculus{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Profile Settings</h1>
+        <p class="page-subtitle">Manage your account information and submit system feedback.</p>
+    </div>
+</div>
+
+<div class="grid-main-aside">
+    <!-- Main Form and Feedback Panel -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <!-- Password Settings -->
+        <div class="glass-panel card">
+            <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; font-family: 'Outfit';"><i class="fa-solid fa-key" style="color: var(--primary);"></i> Change Password</h2>
+            
+            <form onsubmit="handlePasswordChange(event)" id="password-form">
+                <div class="form-group">
+                    <label for="new_password" class="form-label">New Password</label>
+                    <input type="password" id="new_password" class="form-input" required placeholder="Min. 8 characters" minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                    <input type="password" id="confirm_password" class="form-input" required placeholder="Confirm new password" minlength="8">
+                </div>
+                <button type="submit" class="btn btn-primary" id="change-pass-btn">
+                    <i class="fa-solid fa-floppy-disk"></i> Update Password
+                </button>
+            </form>
+        </div>
+
+        <!-- Support Ticket Report Submitter -->
+        <div class="glass-panel card">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-family: 'Outfit';"><i class="fa-solid fa-bug" style="color: var(--error);"></i> Submit Feedback or Report Bug</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+                Flag mathematical solver inaccuracies, request math features, or report UI bugs to administrators.
+            </p>
+            
+            <form onsubmit="submitFeedbackReport(event)" id="feedback-form">
+                <div class="form-group">
+                    <label for="report_title" class="form-label">Title</label>
+                    <input type="text" id="report_title" class="form-input" required placeholder="e.g., Matrix inverse calculation error or Add support for 3D implicit functions" minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="report_content" class="form-label">Description Details</label>
+                    <textarea id="report_content" class="form-input" required rows="5" placeholder="Specify steps to reproduce the bug or exact details of your request..." minlength="10" style="resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary" id="submit-feedback-btn">
+                    <i class="fa-solid fa-paper-plane"></i> Submit Ticket
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Aside User Status Cards -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <div class="glass-panel card" style="text-align: center; padding: 2rem 1.5rem;">
+            <i class="fa-solid fa-circle-user" style="font-size: 5rem; color: var(--accent); margin-bottom: 1rem;"></i>
+            <h3 style="font-size: 1.25rem;">{{ user.full_name or "Anonymous User" }}</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-top: 0.25rem; letter-spacing: 1px;">
+                Role: <span style="color: {% if user.role == 'admin' %}var(--secondary){% else %}var(--primary){% endif %};">{{ user.role }}</span>
+            </p>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border-glass); margin: 1.5rem 0;">
+            
+            <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
+                <div>
+                    <span style="color: var(--text-muted);">Email:</span>
+                    <strong style="float: right; word-break: break-all;">{{ user.email }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Member Since:</span>
+                    <strong style="float: right;">{{ user.created_at.strftime('%Y-%m-%d') }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Registered Days:</span>
+                    <strong style="float: right;">{{ days_member }} days</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Calculations Run:</span>
+                    <strong style="float: right; color: var(--success);">{{ calc_count }}</strong>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Tickets Opened:</span>
+                    <strong style="float: right; color: var(--error);">{{ report_count }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function handlePasswordChange(event) {
+        event.preventDefault();
+        const password = document.getElementById("new_password").value;
+        const confirm = document.getElementById("confirm_password").value;
+        const btn = document.getElementById("change-pass-btn");
+        
+        if (password !== confirm) {
+            showToast("Passwords do not match.", "error");
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+        
+        try {
+            const response = await fetch("/api/admin/users/{{ user.id }}", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password })
+            });
+            
+            if (response.ok) {
+                showToast("Password updated successfully.", "success");
+                document.getElementById("password-form").reset();
+            } else {
+                const data = await response.json();
+                showToast(data.detail || "Failed to update password.", "error");
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Password';
+        }
+    }
+
+    async function submitFeedbackReport(event) {
+        event.preventDefault();
+        const title = document.getElementById("report_title").value.trim();
+        const content = document.getElementById("report_content").value.trim();
+        const btn = document.getElementById("submit-feedback-btn");
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Dispatching...';
+        
+        try {
+            const response = await fetch("/api/dashboard/report", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, content })
+            });
+            
+            if (response.ok) {
+                showToast("Support ticket successfully dispatched to admin.", "success");
+                document.getElementById("feedback-form").reset();
+            } else {
+                const data = await response.json();
+                showToast(data.detail || "Submission failed.", "error");
+            }
+        } catch (err) {
+            showToast("Connection to support pipelines failed.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Ticket';
+        }
+    }
+</script>
+{% endblock %}

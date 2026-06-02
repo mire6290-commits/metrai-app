@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: metrai_calculus_app
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent storage for local SQLite database
+      - sqlite_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/metrai_calculus.db
+      - ENVIRONMENT=production
+      - DEBUG=false
+
+volumes:
+  sqlite_data:
+    driver: local

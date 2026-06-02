@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Console - Metrai Calculus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    .admin-table-container {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 1rem;
+    }
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+    .admin-table th, .admin-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-glass);
+    }
+    .admin-table th {
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .admin-table tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .log-stream {
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 12px;
+        padding: 1.25rem;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        border: 1px solid var(--border-glass);
+    }
+    .log-row {
+        padding: 0.25rem 0.5rem;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Administrator Analytics</h1>
+        <p class="page-subtitle">Monitor server-wide telemetry, manage user access states, and resolve bug support tickets.</p>
+    </div>
+</div>
+
+<!-- System Statistics Telemetry Cards -->
+<div class="dash-stat-grid">
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ total_users }}</h3>
+            <p>Total Registered Users</p>
+        </div>
+    </div>
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success);">
+            <i class="fa-solid fa-server"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ total_calculations }}</h3>
+            <p>Total Calculations Resolved</p>
+        </div>
+    </div>
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--error);">
+            <i class="fa-solid fa-ticket"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ open_reports }}</h3>
+            <p>Open Feedback Tickets</p>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation Header for Admin sections -->
+<div class="tabs-header" style="margin-top: 2.5rem; margin-bottom: 1.5rem;">
+    <button class="tab-btn active" onclick="switchAdminTab('users')"><i class="fa-solid fa-users-gear"></i> User Registry</button>
+    <button class="tab-btn" onclick="switchAdminTab('reports')"><i class="fa-solid fa-envelope-open-text"></i> Support Tickets</button>
+    <button class="tab-btn" onclick="switchAdminTab('logs')"><i class="fa-solid fa-terminal"></i> Activity Log Audits</button>
+</div>
+
+<!-- ADMIN SECTIONS -->
+<div style="min-height: 450px;">
+    
+    <!-- Tab 1: Users Registry -->
+    <div id="admin-users" class="tab-content active glass-panel card" style="padding: 2rem 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-family:'Outfit';"><i class="fa-solid fa-users" style="color:var(--primary);"></i> User Management Workspace</h2>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.15rem;">Elevate member ranks or revoke database write access privileges.</p>
+        
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email Address</th>
+                        <th>System Role</th>
+                        <th>Status</th>
+                        <th>Registered Date</th>
+                        <th style="text-align: right;">Administrative Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr id="user-row-{{ u.id }}">
+                        <td>{{ u.id }}</td>
+                        <td><strong>{{ u.full_name or "Anonymous" }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>
+                            <select onchange="updateUserRole({{ u.id }}, this.value)" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; max-width: 100px; display:inline-block; border-color: rgba(255,255,255,0.05);" {% if u.id == user.id %}disabled{% endif %}>
+                                <option value="user" {% if u.role == 'user' %}selected{% endif %}>User</option>
+                                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span id="user-active-badge-{{ u.id }}" style="padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; background: {% if u.is_active %}rgba(16,185,129,0.15); color:var(--success);{% else %}rgba(239,68,68,0.15); color:var(--error);{% endif %}">
+                                {% if u.is_active %}Active{% else %}Suspended{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td style="text-align: right;">
+                            {% if u.id != user.id %}
+                            <button id="user-toggle-btn-{{ u.id }}" onclick="toggleUserStatus({{ u.id }}, {{ 'true' if not u.is_active else 'false' }})" class="btn {% if u.is_active %}btn-danger{% else %}btn-secondary{% endif %}" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+                                {% if u.is_active %}<i class="fa-solid fa-user-slash"></i> Suspend{% else %}<i class="fa-solid fa-user-check"></i> Activate{% endif %}
+                            </button>
+                            {% else %}
+                            <span style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">Primary Admin</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 2: Support Tickets reports -->
+    <div id="admin-reports" class="tab-content glass-panel card" style="padding: 2rem 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-family:'Outfit';"><i class="fa-solid fa-envelope-open-text" style="color:var(--warning);"></i> Active support Tickets</h2>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.15rem;">Review bug inquiries and feature requests from platform users.</p>
+        
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Reporter</th>
+                        <th>Title Description</th>
+                        <th>Message Content</th>
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th style="text-align: right;">Resolution Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if not reports %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem 0;">No support tickets submitted yet.</td>
+                    </tr>
+                    {% endif %}
+                    {% for r in reports %}
+                    <tr id="report-row-{{ r.id }}">
+                        <td>{{ r.id }}</td>
+                        <td>{{ r.reporter.email }}</td>
+                        <td><strong>{{ r.title }}</strong></td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.content }}</td>
+                        <td>
+                            <select onchange="updateTicketStatus({{ r.id }}, this.value)" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; max-width: 130px; display:inline-block; border-color: rgba(255,255,255,0.05);">
+                                <option value="open" {% if r.status == 'open' %}selected{% endif %}>Open</option>
+                                <option value="in_progress" {% if r.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="resolved" {% if r.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                            </select>
+                        </td>
+                        <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td style="text-align: right;">
+                            <button onclick="viewFullTicketDetails({{ r.id }}, '{{ r.reporter.email }}', '{{ r.title | replace("'", "\\'") }}', '{{ r.content | replace("'", "\\'") }}')" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;"><i class="fa-solid fa-expand"></i> Expand</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 3: System Logs audits -->
+    <div id="admin-logs" class="tab-content glass-panel card" style="padding: 2rem 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-family:'Outfit';"><i class="fa-solid fa-terminal" style="color:var(--accent);"></i> Activity Audits Stream</h2>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.15rem;">Real-time chronological trace log of transactions resolved by the server.</p>
+        
+        <div style="text-align: right; margin-bottom: 1rem;">
+            <button onclick="window.location.reload()" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem;"><i class="fa-solid fa-arrows-rotate"></i> Refresh Logs</button>
+        </div>
+        
+        <div class="log-stream">
+            {% for log in logs %}
+            <div class="log-row">
+                <span style="color:var(--primary);">[{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}]</span> 
+                <span style="color:var(--success);">IP: {{ log.ip_address }}</span> - 
+                <strong>Action: {{ log.action }}</strong> - 
+                <span style="color:var(--text-muted); font-size:0.75rem;">UA: {{ log.user_agent }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Full Support Ticket Details Modal -->
+<div id="ticket-modal" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="glass-panel card" style="max-width: 600px; width: 100%; position: relative;">
+        <button onclick="closeTicketModal()" style="position: absolute; right: 1.5rem; top: 1.5rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        
+        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Support Ticket Details</h2>
+        <p id="ticket-meta" style="font-size: 0.85rem; color: var(--accent); margin-bottom: 1.5rem;"></p>
+        
+        <div class="form-group">
+            <label class="form-label">Subject Title</label>
+            <div id="ticket-title" style="font-weight:700; padding:0.75rem; background:rgba(0,0,0,0.1); border-radius:8px;"></div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Message Content Description</label>
+            <div id="ticket-content" style="padding:0.75rem; background:rgba(0,0,0,0.1); border-radius:8px; white-space:pre-wrap; min-height:120px; font-size:0.95rem; line-height:1.4;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchAdminTab(tabId) {
+        document.querySelectorAll("#admin-users, #admin-reports, #admin-logs").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        
+        document.getElementById(`admin-${tabId}`).classList.add("active");
+        event.currentTarget.classList.add("active");
+    }
+
+    async function toggleUserStatus(userId, activate) {
+        try {
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ is_active: activate })
+            });
+            if (response.ok) {
+                showToast(`User account status modified.`, "success");
+                
+                // Update active badge and action buttons instantly
+                const badge = document.getElementById(`user-active-badge-${userId}`);
+                const btn = document.getElementById(`user-toggle-btn-${userId}`);
+                
+                if (activate) {
+                    badge.innerText = "Active";
+                    badge.style.background = "rgba(16,185,129,0.15)";
+                    badge.style.color = "var(--success)";
+                    btn.className = "btn btn-danger";
+                    btn.innerHTML = '<i class="fa-solid fa-user-slash"></i> Suspend';
+                    btn.setAttribute("onclick", `toggleUserStatus(${userId}, false)`);
+                } else {
+                    badge.innerText = "Suspended";
+                    badge.style.background = "rgba(239,68,68,0.15)";
+                    badge.style.color = "var(--error)";
+                    btn.className = "btn btn-secondary";
+                    btn.innerHTML = '<i class="fa-solid fa-user-check"></i> Activate';
+                    btn.setAttribute("onclick", `toggleUserStatus(${userId}, true)`);
+                }
+            } else {
+                showToast("Failed to modify user state.", "error");
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+        }
+    }
+
+    async function updateUserRole(userId, newRole) {
+        try {
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: newRole })
+            });
+            if (response.ok) {
+                showToast(`User elevated to role: ${newRole}.`, "success");
+            } else {
+                showToast("Failed to elevate user role.", "error");
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+        }
+    }
+
+    async function updateTicketStatus(reportId, newStatus) {
+        try {
+            const response = await fetch(`/api/admin/reports/${reportId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (response.ok) {
+                showToast(`Support Ticket status updated to: ${newStatus}`, "success");
+            } else {
+                showToast("Failed to alter ticket status.", "error");
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+        }
+    }
+
+    function viewFullTicketDetails(id, reporter, title, content) {
+        document.getElementById("ticket-meta").innerText = `Ticket ID: #${id} | From: ${reporter}`;
+        document.getElementById("ticket-title").innerText = title;
+        document.getElementById("ticket-content").innerText = content;
+        document.getElementById("ticket-modal").style.display = "flex";
+    }
+
+    function closeTicketModal() {
+        document.getElementById("ticket-modal").style.display = "none";
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Metrai Calculus - A professional local mathematical solver and AI math assistant. Resolve equations, algebra, calculus, matrices, conversions, and OCR images.">
+    
+    <!-- Open Graph SEO Metadata -->
+    <meta property="og:title" content="Metrai Calculus - Self-Hosted Mathematics & AI Engine">
+    <meta property="og:description" content="Perform scientific calculations, matrix algebra, derivatives, integrations, and OCR formula extraction completely locally without paid APIs.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    
+    <title>{% block title %}Metrai Calculus{% endblock %} - Local Mathematics AI Platform</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- KaTeX CSS for High-Speed LaTeX Mathematical Formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- App Master Stylesheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Dynamic Toast Notification Toaster -->
+    <div id="toast-container" style="position: fixed; top: 2rem; right: 2rem; z-index: 10000; display: flex; flex-direction: column; gap: 0.75rem; max-width: 380px; width: 100%;"></div>
+
+    <!-- Premium Sticky Header Navbar -->
+    <nav class="navbar glass-panel">
+        <a href="/" class="logo-container">
+            <span class="logo-icon"><i class="fa-solid fa-square-root-variable"></i></span>
+            <span class="logo-text">Metrai<span>Calculus</span></span>
+        </a>
+        
+        <ul class="nav-links">
+            <li><a href="/" class="nav-link {% if page == 'home' %}active{% endif %}"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li><a href="/calculator" class="nav-link {% if page == 'calculator' %}active{% endif %}"><i class="fa-solid fa-calculator"></i> Solver</a></li>
+            <li><a href="/ocr" class="nav-link {% if page == 'ocr' %}active{% endif %}"><i class="fa-solid fa-camera"></i> Scan Formula</a></li>
+            {% if user %}
+            <li><a href="/dashboard" class="nav-link {% if page == 'dashboard' %}active{% endif %}"><i class="fa-solid fa-gauge"></i> Workspace</a></li>
+            {% if user.role == 'admin' %}
+            <li><a href="/admin" class="nav-link {% if page == 'admin' %}active{% endif %}"><i class="fa-solid fa-user-shield"></i> Admin</a></li>
+            {% endif %}
+            {% endif %}
+        </ul>
+        
+        <div class="nav-auth">
+            {% if user %}
+            <a href="/profile" class="nav-link {% if page == 'profile' %}active{% endif %}" style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-circle-user" style="font-size: 1.25rem; color: var(--accent);"></i>
+                <span>{{ user.full_name or user.email }}</span>
+            </a>
+            <button onclick="handleLogout()" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+            {% else %}
+            <a href="/login" class="btn btn-secondary"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a>
+            <a href="/register" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Join Free</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Core App View Container -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 <a href="/">Metrai Calculus</a>. Powered by local SymPy, SciPy, and OpenCV engine. Production ready.</p>
+    </footer>
+
+    <!-- Plotly & KaTeX Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.29.1/plotly.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Global App Javascript Handlers -->
+    <script>
+        // Global utility to render KaTeX formula tags automatically
+        function renderMath() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+        }
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            renderMath();
+            
+            // Check for error parameters in URL to display toasts
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorMsg = urlParams.get('error');
+            if (errorMsg) {
+                showToast(errorMsg, "error");
+            }
+            const successMsg = urlParams.get('success');
+            if (successMsg) {
+                showToast(successMsg, "success");
+            }
+        });
+
+        // Beautiful Dynamic Toaster Notification System
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = "glass-panel";
+            toast.style.cssText = `
+                padding: 1rem 1.25rem;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                box-shadow: var(--shadow-premium);
+                animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                color: var(--text-primary);
+                font-size: 0.9rem;
+                font-weight: 500;
+                border-left: 4px solid var(--primary);
+            `;
+            
+            let icon = '<i class="fa-solid fa-circle-info" style="color: var(--primary);"></i>';
+            if (type === "success") {
+                toast.style.borderLeftColor = "var(--success)";
+                icon = '<i class="fa-solid fa-circle-check" style="color: var(--success);"></i>';
+            } else if (type === "error") {
+                toast.style.borderLeftColor = "var(--error)";
+                icon = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--error);"></i>';
+            } else if (type === "warning") {
+                toast.style.borderLeftColor = "var(--warning)";
+                icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--warning);"></i>';
+            }
+            
+            toast.innerHTML = `${icon} <span style="flex:1;">${message}</span> <button onclick="this.parentElement.remove()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = "slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+                setTimeout(() => toast.remove(), 280);
+            }, 4500);
+        }
+
+        // Animated Slide out/in Keyframes injections
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes slideIn {
+                from { transform: translateX(110%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(110%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // JWT Session Logout Handler
+        async function handleLogout() {
+            try {
+                const response = await fetch("/api/auth/logout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+                if (response.ok) {
+                    showToast("Successfully logged out. Redirecting...", "success");
+                    setTimeout(() => window.location.href = "/", 1000);
+                } else {
+                    showToast("Failed to log out cleanly.", "error");
+                }
+            } catch (err) {
+                showToast("Connection to server failed.", "error");
+            }
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

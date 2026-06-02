@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Metrai Calculus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 250px);
+    }
+    .auth-card {
+        max-width: 440px;
+        width: 100%;
+        padding: 3rem 2.5rem;
+    }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .auth-header h2 {
+        font-size: 2rem;
+        font-family: 'Outfit';
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--text-primary), var(--text-muted));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .auth-header p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 0.35rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="glass-panel auth-card">
+        <div class="auth-header">
+            <h2>Welcome Back</h2>
+            <p>Access your local math assistant and dashboard workspace</p>
+        </div>
+        
+        <form id="login-form" onsubmit="submitLogin(event)">
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-input" required placeholder="name@domain.com">
+            </div>
+            
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label for="password" class="form-label" style="margin-bottom: 0;">Password</label>
+                    <a href="#" onclick="forgotPassword()" style="font-size: 0.8rem; color: var(--primary); text-decoration: none;">Forgot?</a>
+                </div>
+                <div style="position: relative;">
+                    <input type="password" id="password" class="form-input" required placeholder="••••••••" style="padding-right: 2.5rem;">
+                    <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">
+                        <i class="fa-solid fa-eye" id="password-toggle-icon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.9rem;" id="submit-btn">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
+        </form>
+        
+        <div style="margin-top: 2rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+            Don't have an account? <a href="/register" style="color: var(--accent); text-decoration: none; font-weight: 600;">Create Account</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById("password");
+        const toggleIcon = document.getElementById("password-toggle-icon");
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            toggleIcon.className = "fa-solid fa-eye-slash";
+        } else {
+            passwordInput.type = "password";
+            toggleIcon.className = "fa-solid fa-eye";
+        }
+    }
+
+    async function submitLogin(event) {
+        event.preventDefault();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const btn = document.getElementById("submit-btn");
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+        
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast("Logged in successfully. Accessing workspace...", "success");
+                setTimeout(() => window.location.href = "/dashboard", 800);
+            } else {
+                showToast(data.detail || "Authentication failed. Check credentials.", "error");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In';
+            }
+        } catch (err) {
+            showToast("Failed to communicate with authentication services.", "error");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In';
+        }
+    }
+
+    async function forgotPassword() {
+        const email = document.getElementById("email").value.trim();
+        if (!email) {
+            showToast("Please input your email address in the field first.", "warning");
+            return;
+        }
+        
+        showToast("Sending reset token to local mail pipeline...", "info");
+        try {
+            const response = await fetch("/api/auth/forgot-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast(`Simulation reset link created! Token is: ${data.reset_token}`, "success");
+                
+                // Prompt user to enter new password immediately in our dev mode!
+                const newPassword = prompt(`Reset token sent. Enter new password:`);
+                if (newPassword && newPassword.length >= 8) {
+                    const resetResponse = await fetch("/api/auth/reset-password", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ token: data.reset_token, new_password: newPassword })
+                    });
+                    const rData = await resetResponse.json();
+                    if (resetResponse.ok) {
+                        showToast("Password updated. You can now sign in.", "success");
+                    } else {
+                        showToast(rData.detail, "error");
+                    }
+                }
+            } else {
+                showToast(data.detail, "error");
+            }
+        } catch (err) {
+            showToast("Server communication error.", "error");
+        }
+    }
+</script>
+{% endblock %}

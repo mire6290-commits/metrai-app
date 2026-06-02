@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Equation - Metrai Calculus{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 2rem;">
+    <div>
+        <h1 class="page-title">OCR Formula Recognition</h1>
+        <p class="page-subtitle">Upload mathematical print photos or draw equations directly on the canvas sketcher to solve them.</p>
+    </div>
+</div>
+
+<div class="ocr-workspace-grid">
+    <!-- INPUT COLUMN: FILES & DRAW CANVAS -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        
+        <!-- Tab Sub-Header for Input Selector -->
+        <div class="glass-panel card" style="padding: 1.5rem;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+                <button type="button" class="tab-btn active" id="input-upload-btn" onclick="toggleOCRInput('upload')"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo</button>
+                <button type="button" class="tab-btn" id="input-draw-btn" onclick="toggleOCRInput('draw')"><i class="fa-solid fa-signature"></i> Sketch Board</button>
+            </div>
+            
+            <!-- Option A: File Upload Zone -->
+            <div id="ocr-upload-block">
+                <div class="ocr-upload-zone" id="drop-zone" onclick="triggerFileInput()">
+                    <i class="fa-solid fa-image ocr-upload-icon" id="upload-status-icon"></i>
+                    <h3 style="font-size: 1.15rem; margin-bottom: 0.25rem;" id="upload-status-title">Drag & Drop Image</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);" id="upload-status-desc">Supports PNG, JPG, JPEG up to 10MB</p>
+                    <input type="file" id="file-input" style="display:none;" accept="image/*" onchange="previewFile(event)">
+                </div>
+                <div id="file-preview-container" style="display:none; margin-top: 1.5rem; text-align: center;">
+                    <img id="file-preview" style="max-height: 200px; max-width: 100%; border-radius: 12px; border: 1px solid var(--border-glass);" src="">
+                    <div style="text-align: right; margin-top: 0.5rem;">
+                        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="clearFile()"><i class="fa-solid fa-trash-can"></i> Clear Image</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Option B: Canvas Sketchboard -->
+            <div id="ocr-draw-block" style="display:none;">
+                <div class="canvas-container">
+                    <canvas id="ocr-canvas"></canvas>
+                </div>
+                <div class="canvas-controls">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <label class="form-label" style="margin-bottom:0; font-size:0.8rem;">Size:</label>
+                        <input type="range" id="brush-size" min="2" max="15" value="5" style="accent-color: var(--primary); max-width: 100px;">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem;" onclick="clearCanvas()"><i class="fa-solid fa-eraser"></i> Clear Canvas</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OCR Controls Selector -->
+            <div style="margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 1.5rem;">
+                <div class="form-group">
+                    <label class="form-label">Mathematical Operation Mode</label>
+                    <select id="ocr-op" class="form-input form-select">
+                        <option value="solve">Recognize & Solve Formula</option>
+                        <option value="simplify">Recognize & Simplify Terms</option>
+                        <option value="derivative">Recognize & Differentiate</option>
+                        <option value="integral">Recognize & Integrate</option>
+                        <option value="extract">Recognize & Extract Text Only</option>
+                    </select>
+                </div>
+                <button onclick="processMathOCR()" class="btn btn-accent" id="ocr-btn" style="width: 100%; padding: 0.85rem;"><i class="fa-solid fa-scanner"></i> Analyze & Compute Image</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- OUTPUT COLUMN: RESULTS DERIVATIONS -->
+    <div class="glass-panel workspace-output-panel" id="ocr-output-panel">
+        
+        <!-- Empty Awaiting Placeholder -->
+        <div id="ocr-placeholder" style="text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-expand" style="font-size: 4rem; color: var(--accent); opacity: 0.6; margin-bottom: 1.5rem; animation: pulse 2.5s infinite;"></i>
+            <h3 style="font-size: 1.5rem; font-family: 'Outfit'; color: var(--text-primary);">Awaiting Math Scan</h3>
+            <p style="font-size: 0.9rem; max-width: 320px; margin: 0.5rem auto 0 auto; line-height: 1.4;">Provide a clear snapshot containing arithmetic, algebra, or calculus equations to parse them symbolically.</p>
+        </div>
+        
+        <!-- Processing Scan Spinner -->
+        <div id="ocr-loading" style="display: none; text-align: center;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary); margin-bottom: 1.25rem;"></i>
+            <h4 style="font-size: 1.25rem;">Analyzing Image Preprocessing...</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Isolating hand-drawn/printed text strokes using local OpenCV Otsu grids.</p>
+        </div>
+
+        <!-- Render OCR Output Result -->
+        <div id="ocr-results" style="display: none; width: 100%; align-self: flex-start;">
+            <h3 style="font-size: 1.5rem; font-family: 'Outfit'; margin-bottom: 1.25rem; color: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-circle-check"></i> Math Scanned successfully
+            </h3>
+            
+            <div style="background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border-glass); margin-bottom: 1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Extracted Mathematical string:</span>
+                    <button class="action-btn" onclick="copyExtracted()" title="Copy to clipboard"><i class="fa-solid fa-copy"></i></button>
+                </div>
+                <div id="ocr-extracted-text" style="font-family: monospace; font-size: 1.25rem; margin-top: 0.5rem; color: var(--text-primary); font-weight: 700; word-break: break-all;"></div>
+            </div>
+
+            <!-- Steps or Symbolic Result Lists -->
+            <div class="solution-steps" id="ocr-steps-list"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let activeOCRMode = "upload";
+    
+    // Toggle Inputs Selection
+    function toggleOCRInput(mode) {
+        activeOCRMode = mode;
+        document.getElementById("ocr-upload-block").style.display = (mode === "upload") ? "block" : "none";
+        document.getElementById("ocr-draw-block").style.display = (mode === "draw") ? "block" : "none";
+        document.getElementById("input-upload-btn").classList.toggle("active", mode === "upload");
+        document.getElementById("input-draw-btn").classList.toggle("active", mode === "draw");
+        
+        if (mode === "draw") {
+            setTimeout(initCanvas, 100);
+        }
+    }
+
+    // Drag & Drop File Handlers
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    
+    function triggerFileInput() {
+        fileInput.click();
+    }
+
+    // Drag indicators
+    ["dragenter", "dragover"].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        }, false);
+    });
+
+    ["dragleave", "drop"].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+        }, false);
+    });
+
+    dropZone.addEventListener("drop", e => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            previewFile({ target: fileInput });
+        }
+    });
+
+    function previewFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!file.type.startsWith("image/")) {
+            showToast("File uploaded is not a valid image.", "error");
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById("file-preview").src = e.target.result;
+            document.getElementById("file-preview-container").style.display = "block";
+            
+            // Adjust uploader aesthetics
+            document.getElementById("upload-status-icon").className = "fa-solid fa-circle-check";
+            document.getElementById("upload-status-icon").style.color = "var(--success)";
+            document.getElementById("upload-status-title").innerText = "Image Loaded Successfully";
+            document.getElementById("upload-status-desc").innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearFile() {
+        fileInput.value = "";
+        document.getElementById("file-preview-container").style.display = "none";
+        document.getElementById("upload-status-icon").className = "fa-solid fa-image ocr-upload-icon";
+        document.getElementById("upload-status-icon").style.color = "";
+        document.getElementById("upload-status-title").innerText = "Drag & Drop Image";
+        document.getElementById("upload-status-desc").innerText = "Supports PNG, JPG, JPEG up to 10MB";
+    }
+
+    // HTML5 Canvas Sketchboard painting logic
+    let canvas, ctx, painting = false;
+    
+    function initCanvas() {
+        canvas = document.getElementById("ocr-canvas");
+        ctx = canvas.getContext("2d");
+        
+        // Scale canvas relative to container size
+        const bounds = canvas.getBoundingClientRect();
+        canvas.width = bounds.width;
+        canvas.height = bounds.height;
+        
+        // Fill canvas with white background (essential for OCR contrast)
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Brush styles
+        ctx.strokeStyle = "black";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        // Event listeners for draw
+        canvas.addEventListener("mousedown", startPosition);
+        canvas.addEventListener("mouseup", finishedPosition);
+        canvas.addEventListener("mousemove", draw);
+        
+        // Touch events for mobile screens
+        canvas.addEventListener("touchstart", e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            const bounds = canvas.getBoundingClientRect();
+            startPosition({ clientX: t.clientX, clientY: t.clientY });
+        });
+        canvas.addEventListener("touchend", finishedPosition);
+        canvas.addEventListener("touchmove", e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            const bounds = canvas.getBoundingClientRect();
+            draw({ clientX: t.clientX, clientY: t.clientY });
+        });
+    }
+
+    function startPosition(e) {
+        painting = true;
+        draw(e);
+    }
+    
+    function finishedPosition() {
+        painting = false;
+        ctx.beginPath(); // Reset paths
+    }
+
+    function draw(e) {
+        if (!painting) return;
+        const bounds = canvas.getBoundingClientRect();
+        const x = e.clientX - bounds.left;
+        const y = e.clientY - bounds.top;
+        
+        const size = document.getElementById("brush-size").value;
+        ctx.lineWidth = size;
+        
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    }
+
+    function clearCanvas() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        showToast("Sketch board cleared.", "info");
+    }
+
+    // Mathematical OCR Ingestion dispatchers
+    async function processMathOCR() {
+        const op = document.getElementById("ocr-op").value;
+        const btn = document.getElementById("ocr-btn");
+        const placeholder = document.getElementById("ocr-placeholder");
+        const loading = document.getElementById("ocr-loading");
+        const results = document.getElementById("ocr-results");
+        
+        let formData = new FormData();
+        
+        if (activeOCRMode === "upload") {
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast("Please drag & drop or select an image file first.", "warning");
+                return;
+            }
+            formData.append("file", file);
+        } else {
+            // Get Canvas image bytes
+            const dataUrl = canvas.toDataURL("image/png");
+            // Convert data URL to Blob
+            const blob = await (await fetch(dataUrl)).blob();
+            formData.append("file", blob, "drawn_sketch.png");
+        }
+        
+        placeholder.style.display = "none";
+        loading.style.display = "block";
+        results.style.display = "none";
+        btn.disabled = true;
+        
+        try {
+            const endpoint = (op === "extract") ? "/api/ocr/upload" : `/api/ocr/solve?operation=${op}`;
+            const response = await fetch(endpoint, {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+            
+            loading.style.display = "none";
+            
+            if (response.ok) {
+                if (data.success === false) {
+                    showToast(data.error || "OCR processed but character recognition failed.", "error");
+                    
+                    // Render details of missing binary dependency if Tesseract is not installed
+                    if (data.tesseract_installed === false) {
+                        results.style.display = "block";
+                        document.getElementById("ocr-extracted-text").innerHTML = `<span style="color:var(--error); font-size:0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i> Tesseract binary not found.</span>`;
+                        const list = document.getElementById("ocr-steps-list");
+                        list.innerHTML = `
+                            <div class="step-card" style="border-color: rgba(239, 68, 68, 0.2);">
+                                <div class="step-number" style="color:var(--error);">VPS / Local Server Dependency Missing</div>
+                                <div class="step-text" style="font-size:0.9rem;">
+                                    ${data.error}<br><br>
+                                    <strong>How to configure:</strong><br>
+                                    1. For Ubuntu/Debian: Run <code>sudo apt-get install tesseract-ocr</code><br>
+                                    2. For Windows: Download installer, then configure your <code>TESSERACT_CMD</code> path in <code>.env</code>.
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        resetOCRPlaceholder();
+                    }
+                    return;
+                }
+
+                results.style.display = "block";
+                
+                // Show extracted string
+                const extractedText = data.cleaned_expression || data.raw_text || (data.ocr && data.ocr.cleaned_expression);
+                document.getElementById("ocr-extracted-text").innerText = extractedText;
+                
+                const list = document.getElementById("ocr-steps-list");
+                list.innerHTML = "";
+                
+                // Show math solve derivations
+                if (data.solution) {
+                    const sol = data.solution;
+                    if (sol.steps && sol.steps.length > 0) {
+                        sol.steps.forEach((step, idx) => {
+                            const row = document.createElement("div");
+                            row.className = "step-card";
+                            row.innerHTML = `
+                                <div class="step-number">Step ${idx + 1}</div>
+                                <div class="step-text">${step}</div>
+                            `;
+                            list.appendChild(row);
+                        });
+                    } else if (sol.result) {
+                        const row = document.createElement("div");
+                        row.className = "step-card";
+                        row.innerHTML = `
+                            <div class="step-number">Final Symbolic Result</div>
+                            <div class="step-text">$$${sol.latex || sol.result}$$</div>
+                        `;
+                        list.appendChild(row);
+                    }
+                } else {
+                    const row = document.createElement("div");
+                    row.className = "step-card";
+                    row.innerHTML = `
+                        <div class="step-number">OCR Ingestion</div>
+                        <div class="step-text">Parsed formula characters successfully. Solution calculations steps were not requested. You can copy the expression above to the solver tab.</div>
+                    `;
+                    list.appendChild(row);
+                }
+                
+                renderMath();
+            } else {
+                showToast(data.detail || "Math scanning failed.", "error");
+                resetOCRPlaceholder();
+            }
+        } catch (err) {
+            showToast("Server connection error during image recognition.", "error");
+            resetOCRPlaceholder();
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function resetOCRPlaceholder() {
+        document.getElementById("ocr-placeholder").style.display = "block";
+        document.getElementById("ocr-loading").style.display = "none";
+        document.getElementById("ocr-results").style.display = "none";
+    }
+
+    function copyExtracted() {
+        const text = document.getElementById("ocr-extracted-text").innerText;
+        navigator.clipboard.writeText(text);
+        showToast("Copied equation string to clipboard.", "success");
+    }
+</script>
+<style>
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.6; }
+        50% { transform: scale(1.08); opacity: 1; }
+    }
+</style>
+{% endblock %}

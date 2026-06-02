@@ -1,0 +1,9 @@
+PROJET N°20
+═══════════════════════════════
+Renommez ce dossier : projet_20_NOM_DE_VOTRE_AFFAIRE
+
+Déposez dans ce dossier :
+  ✓ plan.pdf              → le plan original
+  ✓ metres_expert.xlsx    → le métré validé
+
+Ne pas modifier la structure des sous-dossiers.
