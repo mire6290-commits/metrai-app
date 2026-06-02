@@ -12,7 +12,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict
+import uuid
+import asyncio
+
+TASKS_STORE: Dict[str, dict] = {}
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
