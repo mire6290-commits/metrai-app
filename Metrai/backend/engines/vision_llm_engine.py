@@ -233,30 +233,53 @@ class VisionLLMEngine:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _call_gemini(self, image: Image.Image, user_message: str) -> str:
-        import google.generativeai as genai
-        import tempfile
+        import requests
+        import io
+        import base64
 
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise EnvironmentError("GEMINI_API_KEY not set")
 
-        genai.configure(api_key=api_key, transport="rest")
+        logger.info("Converting image to JPEG for Gemini API...")
+        buf = io.BytesIO()
+        if image.mode in ('RGBA', 'P'):
+            image = image.convert('RGB')
+        image.save(buf, format="JPEG", quality=80)
+        b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-        # Generation config to force JSON output
-        generation_config = genai.types.GenerationConfig(
-            temperature=0.0,
-            response_mime_type="application/json"
-        )
-
-        model = genai.GenerativeModel(
-            model_name="gemini-flash-latest",
-            generation_config=generation_config,
-            system_instruction=SYSTEM_PROMPT,
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         
-        logger.info("Generating content...")
-        response = model.generate_content([user_message, image])
-        return response.text
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": user_message},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": b64_data
+                        }
+                    }
+                ]
+            }],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json"
+            },
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            }
+        }
+
+        logger.info("Sending request to Gemini API (raw REST)...")
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=60)
+        
+        if not resp.ok:
+            logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
+            resp.raise_for_status()
+
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
     # ------------------------------------------------------------------
     # Parsing
