@@ -72,7 +72,7 @@ class TextLLMEngine:
                 raise EnvironmentError("GEMINI_API_KEY not set")
                 
             logger.info("Sending text to Gemini (raw REST)...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
             
             payload = {
                 "contents": [{"parts": [{"text": user_msg}]}],
