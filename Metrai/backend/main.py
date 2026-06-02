@@ -62,6 +62,20 @@ async def startup():
     _text_llm = TextLLMEngine(provider=provider)
     logger.info("Engines ready — provider: %s", provider)
 
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global error: {str(exc)}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+
 
 # ---------------------------------------------------------------------------
 # Response models

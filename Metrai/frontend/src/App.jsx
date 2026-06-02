@@ -58,7 +58,7 @@ function App() {
       setProcessStep("Lecture OCR et application des règles métier de charpente...");
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('mode', 'hybrid');
+      formData.append('mode', 'vision');
       
       const extractRes = await fetch(`${API_BASE_URL}/extract`, {
         method: 'POST',
