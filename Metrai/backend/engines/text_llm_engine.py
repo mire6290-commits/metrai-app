@@ -66,25 +66,33 @@ class TextLLMEngine:
             raw_json = response.content[0].text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
         else:
-            import google.generativeai as genai
+            import requests
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 raise EnvironmentError("GEMINI_API_KEY not set")
                 
-            genai.configure(api_key=api_key, transport="rest")
-            generation_config = genai.types.GenerationConfig(
-                temperature=0.0,
-                response_mime_type="application/json"
-            )
-            model = genai.GenerativeModel(
-                model_name="gemini-flash-latest",
-                generation_config=generation_config,
-                system_instruction=SYSTEM_PROMPT,
-            )
+            logger.info("Sending text to Gemini (raw REST)...")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={api_key}"
             
-            logger.info("Sending text to Gemini...")
-            response = model.generate_content(user_msg)
-            raw_json = response.text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            payload = {
+                "contents": [{"parts": [{"text": user_msg}]}],
+                "generationConfig": {
+                    "temperature": 0.0,
+                    "responseMimeType": "application/json"
+                },
+                "systemInstruction": {
+                    "parts": [{"text": SYSTEM_PROMPT}]
+                }
+            }
+            
+            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
+            if not resp.ok:
+                logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
+                resp.raise_for_status()
+                
+            data = resp.json()
+            raw_json = data["candidates"][0]["content"]["parts"][0]["text"]
+            raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
             logger.info(f"Raw JSON from LLM: {raw_json}")
         
         # Parse JSON

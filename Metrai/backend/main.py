@@ -173,28 +173,33 @@ async def extract(
             result = _text_llm.analyze(markdown_content, context=context)
             all_results.append(result)
         else:
-            for page_img in page_images:
+            try:
+                from engines.pdf_text_extractor import PDFTextExtractor
+                _text_extractor = PDFTextExtractor()
+                extracted_pages = _text_extractor.extract_all_pages(str(tmp_path))
+                
+                if pages != 'all':
+                    requested = {int(p.strip()) for p in pages.split(',')}
+                    extracted_pages = [p for p in extracted_pages if p.page_number in requested]
+
+                if not extracted_pages:
+                    raise HTTPException(status_code=400, detail="No valid pages found")
+            except Exception as e:
+                logger.error(f"Error loading PDF: {e}")
+                raise HTTPException(status_code=400, detail=str(e))
+
+            for p_text in extracted_pages:
                 if mode == "regex":
-                    # Regex-only: use existing AIEngine (not shown, kept as-is)
-                    logger.info("Regex mode — page %d", page_img.page_number)
+                    logger.info("Regex mode — page %d", p_text.page_number)
                     continue
 
-                # Vision path
-                if _parser.should_tile(page_img):
-                    logger.info("Page %d is large — tiling", page_img.page_number)
-                    tiles = _parser.tile_page(page_img)
-                    tile_results = [
-                        _vision.analyze(
-                            t.image,
-                            page_number=t.page_number,
-                            tile_index=t.tile_index,
-                            context={**context, "tile": t.tile_index},
-                        )
-                        for t in tiles
-                    ]
-                    merged = merge_tile_results(tile_results)
-                    all_results.append(merged)
+                if len(p_text.text_content.strip()) > 100:
+                    logger.info(f"Page {p_text.page_number}: Vector text found ({len(p_text.text_content)} chars). Using Text LLM.")
+                    result = _text_llm.analyze(p_text.text_content, context=context)
+                    all_results.append(result)
                 else:
+                    logger.info(f"Page {p_text.page_number}: No text found. Falling back to Vision LLM.")
+                    page_img = _parser.render_page(str(tmp_path), p_text.page_number)
                     result = _vision.analyze(
                         page_img.image,
                         page_number=page_img.page_number,
@@ -276,12 +281,15 @@ async def extract_async(
                 tmp_path = Path(tmp.name)
             
             try:
-                page_images = _parser.render_pages(str(tmp_path))
+                from engines.pdf_text_extractor import PDFTextExtractor
+                _text_extractor = PDFTextExtractor()
+                extracted_pages = _text_extractor.extract_all_pages(str(tmp_path))
+                
                 if pages != 'all':
                     requested = {int(p.strip()) for p in pages.split(',')}
-                    page_images = [p for p in page_images if p.page_number in requested]
+                    extracted_pages = [p for p in extracted_pages if p.page_number in requested]
 
-                if not page_images:
+                if not extracted_pages:
                     TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No valid pages found'}
                     return
 
@@ -292,13 +300,22 @@ async def extract_async(
                 }
 
                 all_results = []
-                for page_img in page_images:
-                    result = _vision.analyze(
-                        page_img.image,
-                        page_number=page_img.page_number,
-                        context=context,
-                    )
-                    all_results.append(result)
+                for p_text in extracted_pages:
+                    # If page has sufficient text, use the much cheaper/faster Text LLM
+                    if len(p_text.text_content.strip()) > 100:
+                        logger.info(f"Page {p_text.page_number}: Vector text found ({len(p_text.text_content)} chars). Using Text LLM.")
+                        result = _text_llm.analyze(p_text.text_content, context=context)
+                        all_results.append(result)
+                    else:
+                        logger.info(f"Page {p_text.page_number}: No text found. Falling back to Vision LLM.")
+                        # Render just this page
+                        page_img = _parser.render_page(str(tmp_path), p_text.page_number)
+                        result = _vision.analyze(
+                            page_img.image,
+                            page_number=page_img.page_number,
+                            context=context,
+                        )
+                        all_results.append(result)
 
                 if not all_results:
                     TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
@@ -344,8 +361,9 @@ async def extract_async(
                 tmp_path.unlink(missing_ok=True)
                 
         except Exception as e:
-            logger.error(f'Task {task_id} failed: {e}')
-            TASKS_STORE[task_id] = {'status': 'error', 'detail': str(e)}
+            import traceback
+            logger.error(f"Task {task_id} failed: {e}")
+            TASKS_STORE[task_id] = {"status": "error", "detail": traceback.format_exc()}
 
     asyncio.create_task(process_task())
     return {'task_id': task_id}
