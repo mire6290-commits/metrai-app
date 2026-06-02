@@ -25,7 +25,7 @@ const PROFILES_DB = {
   "JARRETIPE450": [77.6, 1.66], "JARRETSIPE450": [77.6, 1.66]
 };
 
-const API_BASE_URL = "https://honest-kings-cut.loca.lt";
+const API_BASE_URL = "https://amira221-metrai-backend.hf.space";
 
 function App() {
   const [file, setFile] = useState(null);
