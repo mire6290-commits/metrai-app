@@ -70,7 +70,7 @@ import traceback
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global error: {str(exc)}\n{traceback.format_exc()}")
     return JSONResponse(
-        status_code=500,
+        status_code=400,
         content={"detail": str(exc)},
         headers={"Access-Control-Allow-Origin": "*"}
     )

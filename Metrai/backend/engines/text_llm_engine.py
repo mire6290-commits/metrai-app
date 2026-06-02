@@ -71,7 +71,7 @@ class TextLLMEngine:
             if not api_key:
                 raise EnvironmentError("GEMINI_API_KEY not set")
                 
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key, transport="rest")
             generation_config = genai.types.GenerationConfig(
                 temperature=0.0,
                 response_mime_type="application/json"

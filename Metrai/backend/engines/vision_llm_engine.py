@@ -240,7 +240,7 @@ class VisionLLMEngine:
         if not api_key:
             raise EnvironmentError("GEMINI_API_KEY not set")
 
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=api_key, transport="rest")
 
         # Generation config to force JSON output
         generation_config = genai.types.GenerationConfig(
