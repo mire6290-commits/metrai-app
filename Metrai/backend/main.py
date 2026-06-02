@@ -247,6 +247,112 @@ async def extract(
 
 from fastapi import Response
 
+
+@app.post('/extract_async')
+async def extract_async(
+    file: UploadFile = File(...),
+    mode: str = Form('vision'),
+    pages: str = Form('all'),
+    scale_hint: str = Form(''),
+    project: str = Form(''),
+    ref: str = Form('')
+):
+    task_id = str(uuid.uuid4())
+    TASKS_STORE[task_id] = {'status': 'processing'}
+    
+    file_bytes = await file.read()
+    filename = file.filename
+    
+    async def process_task():
+        import tempfile
+        from pathlib import Path
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+                tmp.write(file_bytes)
+                tmp_path = Path(tmp.name)
+            
+            try:
+                page_images = _parser.render_pages(str(tmp_path))
+                if pages != 'all':
+                    requested = {int(p.strip()) for p in pages.split(',')}
+                    page_images = [p for p in page_images if p.page_number in requested]
+
+                if not page_images:
+                    TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No valid pages found'}
+                    return
+
+                context = {
+                    'project': project,
+                    'ref': filename,
+                    'scale_hint': scale_hint or 'unknown',
+                }
+
+                all_results = []
+                for page_img in page_images:
+                    result = _vision.analyze(
+                        page_img.image,
+                        page_number=page_img.page_number,
+                        context=context,
+                    )
+                    all_results.append(result)
+
+                if not all_results:
+                    TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
+                    return
+
+                all_profiles_raw = []
+                all_warnings = []
+                all_unreadable = []
+                scale_detected = None
+                drawing_type = 'unknown'
+                provider_used = 'none'
+
+                for r in all_results:
+                    all_profiles_raw.extend(r.profiles)
+                    all_warnings.extend(r.warnings)
+                    all_unreadable.extend(r.unreadable_zones)
+                    if r.scale_detected and not scale_detected:
+                        scale_detected = r.scale_detected
+                    if r.drawing_type != 'unknown':
+                        drawing_type = r.drawing_type
+                    provider_used = r.provider_used
+
+                profiles_out = [_enrich_profile(p) for p in all_profiles_raw]
+                total_weight = sum(p.poids_total_kg for p in profiles_out if p.poids_total_kg is not None)
+                needs_review = sum(1 for p in profiles_out if p.confidence < 0.7)
+
+                final_res = ExtractionResponse(
+                    project=project,
+                    filename=filename,
+                    pages_processed=len(all_results),
+                    scale_detected=scale_detected,
+                    drawing_type=drawing_type,
+                    profiles=profiles_out,
+                    unreadable_zones=list(set(all_unreadable)),
+                    warnings=list(set(all_warnings)),
+                    provider_used=provider_used,
+                    total_weight_kg=round(total_weight, 2),
+                    needs_review_count=needs_review,
+                )
+                TASKS_STORE[task_id] = {'status': 'done', 'result': final_res.model_dump()}
+
+            finally:
+                tmp_path.unlink(missing_ok=True)
+                
+        except Exception as e:
+            logger.error(f'Task {task_id} failed: {e}')
+            TASKS_STORE[task_id] = {'status': 'error', 'detail': str(e)}
+
+    asyncio.create_task(process_task())
+    return {'task_id': task_id}
+
+@app.get('/extract_status/{task_id}')
+async def extract_status(task_id: str):
+    if task_id not in TASKS_STORE:
+        raise HTTPException(status_code=404, detail='Task not found')
+    return TASKS_STORE[task_id]
+
+
 class ExportRequest(BaseModel):
     data: list[dict]
 

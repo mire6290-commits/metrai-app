@@ -60,7 +60,8 @@ function App() {
       formData.append('file', file);
       formData.append('mode', 'vision');
       
-      const extractRes = await fetch(`${API_BASE_URL}/extract`, {
+      // 2) Appel à l'API asynchrone (bypasses timeouts)
+      const extractRes = await fetch(`${API_BASE_URL}/extract_async`, {
         method: 'POST',
         headers: {
           'Bypass-Tunnel-Reminder': 'true'
@@ -69,10 +70,31 @@ function App() {
       });
 
       if (!extractRes.ok) {
-        throw new Error("L'extraction des données a échoué.");
+        const errData = await extractRes.json().catch(() => ({}));
+        throw new Error(errData.detail || `Erreur serveur: ${extractRes.statusText}`);
       }
 
-      const extractData = await extractRes.json();
+      const { task_id } = await extractRes.json();
+      
+      let extractData = null;
+      while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        const statusRes = await fetch(`${API_BASE_URL}/extract_status/${task_id}`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if (!statusRes.ok) {
+            const errData = await statusRes.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Erreur lors du polling');
+        }
+        const statusData = await statusRes.json();
+        if (statusData.status === 'done') {
+            extractData = statusData.result;
+            break;
+        } else if (statusData.status === 'error') {
+            throw new Error(statusData.detail || 'Erreur inconnue');
+        }
+      }
+
       const mappedData = extractData.profiles.map((p, idx) => {
         const profil = p.designation || "";
         const profilKey = profil.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toUpperCase();
