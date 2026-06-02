@@ -15,3 +15,5 @@ services:
         sync: false
       - key: VISION_PROVIDER
         value: "gemini"
+      - key: LLAMA_CLOUD_API_KEY
+        sync: false
