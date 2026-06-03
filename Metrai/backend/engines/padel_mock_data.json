@@ -1,0 +1,370 @@
+{
+  "profiles": [
+    {
+      "designation": "IPE400",
+      "length_m": 4.0,
+      "quantity": 14,
+      "role": "POTEAU"
+    },
+    {
+      "designation": "HEA300",
+      "length_m": 4.0,
+      "quantity": 2,
+      "role": "POTEAU"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 3.925,
+      "quantity": 2,
+      "role": "POTELET"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 4.125,
+      "quantity": 2,
+      "role": "POTELET"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 3.985,
+      "quantity": 2,
+      "role": "POTELET"
+    },
+    {
+      "designation": "IPE400",
+      "length_m": 11.647,
+      "quantity": 14,
+      "role": "TRAVERSE"
+    },
+    {
+      "designation": "IPE450",
+      "length_m": 11.647,
+      "quantity": 2,
+      "role": "TRAVERSE"
+    },
+    {
+      "designation": "IPE400",
+      "length_m": 1.5,
+      "quantity": 14,
+      "role": "ASSEMBLAGE JARRETS"
+    },
+    {
+      "designation": "IPE450",
+      "length_m": 1.5,
+      "quantity": 2,
+      "role": "ASSEMBLAGE JARRETS"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 5.93,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 6.0,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 6.02,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 3.35,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 4.83,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 5.51,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 5.97,
+      "quantity": 4,
+      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 6.6,
+      "quantity": 4,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 6.46,
+      "quantity": 16,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 4.7,
+      "quantity": 2,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 4.23,
+      "quantity": 8,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 3.23,
+      "quantity": 32,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 3.31,
+      "quantity": 8,
+      "role": "CVT"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 2.35,
+      "quantity": 4,
+      "role": "CVT"
+    },
+    {
+      "designation": "D14",
+      "length_m": 1.7,
+      "quantity": 140,
+      "role": "LIERNES"
+    },
+    {
+      "designation": "IPE180",
+      "length_m": 7.01,
+      "quantity": 9,
+      "role": "PANNE"
+    },
+    {
+      "designation": "IPE140",
+      "length_m": 6.0,
+      "quantity": 13,
+      "role": "PANNE"
+    },
+    {
+      "designation": "IPE140",
+      "length_m": 9.37,
+      "quantity": 22,
+      "role": "PANNE"
+    },
+    {
+      "designation": "IPE140",
+      "length_m": 5.51,
+      "quantity": 22,
+      "role": "PANNE"
+    },
+    {
+      "designation": "IPE140",
+      "length_m": 12.88,
+      "quantity": 22,
+      "role": "PANNE"
+    },
+    {
+      "designation": "IPE400",
+      "length_m": 1.036,
+      "quantity": 16,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "IPE400",
+      "length_m": 0.997,
+      "quantity": 4,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 0.92,
+      "quantity": 14,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 1.031,
+      "quantity": 4,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 0.97,
+      "quantity": 2,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "IPE270",
+      "length_m": 0.997,
+      "quantity": 12,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "JARRETS IPE270",
+      "length_m": 0.5,
+      "quantity": 16,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "JARRETS IPE400",
+      "length_m": 0.5,
+      "quantity": 8,
+      "role": "SUPPORT"
+    },
+    {
+      "designation": "L50*5",
+      "length_m": 0.61,
+      "quantity": 16,
+      "role": "BRACON"
+    },
+    {
+      "designation": "ROND Ø24",
+      "length_m": 0.8,
+      "quantity": 44,
+      "role": "TIGE D'ANCRAGE"
+    },
+    {
+      "designation": "L50*5",
+      "length_m": 0.3,
+      "quantity": 44,
+      "role": "SUPPORT SOCLE PIED DE POTEAUX"
+    },
+    {
+      "designation": "L50*5",
+      "length_m": 0.13,
+      "quantity": 44,
+      "role": "SUPPORT SOCLE PIED DE POTEAUX"
+    },
+    {
+      "designation": "HEA120",
+      "length_m": 0.2,
+      "quantity": 22,
+      "role": "BECHE"
+    },
+    {
+      "designation": "TUBE-C-40*40*2",
+      "length_m": 41.0,
+      "quantity": 2,
+      "role": "SOUS LISSE CONTRE BARDAGE"
+    },
+    {
+      "designation": "TUBE-C-40*40*2",
+      "length_m": 25.69,
+      "quantity": 2,
+      "role": "SOUS LISSE CONTRE BARDAGE"
+    },
+    {
+      "designation": "UPN200",
+      "length_m": 2.0,
+      "quantity": 26,
+      "role": "SUPPORT CADRE PÉRIPHÉRIQUE"
+    },
+    {
+      "designation": "CORNIERE L50*50*5",
+      "length_m": 1.6,
+      "quantity": 196,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "L70*70*7",
+      "length_m": 2.0,
+      "quantity": 4,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.77,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 4.63,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.31,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 3.15,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.82,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.8,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.73,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 0.9,
+      "quantity": 16,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.9,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 6.09,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.76,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 5.05,
+      "quantity": 8,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "UPN80",
+      "length_m": 0.985,
+      "quantity": 16,
+      "role": "Cadre Périphérique"
+    },
+    {
+      "designation": "MONTANT UPN80",
+      "length_m": 0.7,
+      "quantity": 256,
+      "role": "Cadre Périphérique"
+    }
+  ]
+}
