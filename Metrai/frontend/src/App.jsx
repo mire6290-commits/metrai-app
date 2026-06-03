@@ -445,6 +445,22 @@ function App() {
                       ))}
                     </React.Fragment>
                   ))}
+                  {/* Ligne Boulonnerie + Soudage */}
+                  <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-card)' }}>
+                    <td colSpan="3" style={{ fontWeight: '800', textAlign: 'center' }}>BOULONNERIE + SOUDAGE</td>
+                    <td style={{ fontWeight: '600' }}>5%</td>
+                    <td colSpan="3"></td>
+                    <td style={{ fontWeight: '700', color: 'var(--primary-color)' }}>
+                      {(totalWeight * 0.05).toFixed(2)}
+                    </td>
+                  </tr>
+                  {/* Poids Tot Net en Kg */}
+                  <tr style={{ background: '#f8cfa4' }}>
+                    <td colSpan="7" style={{ fontWeight: '800', textAlign: 'right', fontStyle: 'italic', color: '#000' }}>Poids Tot Net en Kg</td>
+                    <td style={{ fontWeight: '900', color: '#000' }}>
+                      {(totalWeight * 1.05).toFixed(2)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

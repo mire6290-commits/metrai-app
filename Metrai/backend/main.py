@@ -393,9 +393,12 @@ def _enrich_profile(p: Any) -> ProfileOut:
         d = float(d_match.group(1))
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
 
+    length_val = p.length_m if p.length_m is not None and p.length_m > 0 else 1.0
+    qty_val = p.quantity if getattr(p, 'quantity', None) and p.quantity > 0 else 1
+
     poids = None
-    if masse is not None and p.length_m is not None:
-        poids = round(masse * p.length_m * p.quantity, 2)
+    if masse is not None:
+        poids = round(masse * length_val * qty_val, 2)
         
     # Check for PL A*B*C
     pl_match = re.match(r'PL\s*(\d+)\*(\d+)\*(\d+)', designation)
@@ -404,16 +407,15 @@ def _enrich_profile(p: Any) -> ProfileOut:
         a, b, c = map(float, pl_match.groups())
         # Volume en m3 * 7850 kg/m3
         poids_unitaire = round((a * b * c / 1e9) * 7850, 2)
-        if p.quantity:
-            poids = round(poids_unitaire * p.quantity, 2)
+        poids = round(poids_unitaire * qty_val, 2)
 
     out = ProfileOut(
         id=p.id,
         designation=designation, # Return the formatted one
         type=p.type,
         role=getattr(p, 'role', ''),
-        length_m=p.length_m,
-        quantity=p.quantity,
+        length_m=length_val,
+        quantity=qty_val,
         zone=p.zone,
         confidence=p.confidence,
         masse_lineaire_kg_m=masse,
