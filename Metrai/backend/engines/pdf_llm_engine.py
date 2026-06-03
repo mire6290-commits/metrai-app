@@ -96,7 +96,7 @@ Vous DEVEZ extraire la totalité des éléments de la nomenclature, même s'il y
                     "maxOutputTokens": 8192
                 },
                 "systemInstruction": {
-                    "parts": [{"text": "You are a JSON extractor. Output ONLY valid JSON."}]
+                    "parts": [{"text": SYSTEM_PROMPT + "\n\nYou are a JSON extractor. Output ONLY valid JSON."}]
                 }
             }
             models_to_try = [
