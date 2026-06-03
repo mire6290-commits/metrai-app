@@ -381,14 +381,14 @@ function App() {
               <table>
                 <thead>
                   <tr>
-                    <th>Repère</th>
-                    <th>Profilé</th>
-                    <th>Longueur (mm)</th>
+                    <th>Pos</th>
+                    <th>Nomenclatures</th>
                     <th>Quantité</th>
-                    <th>Poids U. (kg)</th>
-                    <th>Poids Total (kg)</th>
-                    <th>Peinture (m²)</th>
-                    <th>Assemblage</th>
+                    <th>Designation</th>
+                    <th>Long (mm)</th>
+                    <th>Poids Kg/(m)</th>
+                    <th>Poids Kg/Unt</th>
+                    <th>Poids Tot Kg</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -399,13 +399,22 @@ function App() {
                           {role}
                         </td>
                       </tr>
-                      {groupedData[role].map(item => (
+                      {groupedData[role].map((item, index) => (
                         <tr key={item.id}>
+                          <td style={{ width: '8%', textAlign: 'center', fontWeight: '600' }}>
+                            {item.repere || (index + 1)}
+                          </td>
+                          <td style={{ width: '15%' }}>
+                            <span className="badge badge-blue">
+                              {item.assemblage}
+                            </span>
+                          </td>
                           <td style={{ width: '10%' }}>
                             <input 
                               className="editable-cell" 
-                              value={item.repere} 
-                              onChange={(e) => handleDataChange(item.id, 'repere', e.target.value)}
+                              type="number"
+                              value={item.quantite}
+                              onChange={(e) => handleDataChange(item.id, 'quantite', e.target.value)}
                             />
                           </td>
                           <td style={{ width: '15%' }}>
@@ -423,30 +432,14 @@ function App() {
                               onChange={(e) => handleDataChange(item.id, 'longueur', e.target.value)}
                             />
                           </td>
-                          <td style={{ width: '10%' }}>
-                            <input 
-                              className="editable-cell" 
-                              type="number"
-                              value={item.quantite}
-                              onChange={(e) => handleDataChange(item.id, 'quantite', e.target.value)}
-                            />
+                          <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>
+                            {item.poids_lineique !== "---" ? Number(item.poids_lineique).toFixed(2) : "---"}
                           </td>
                           <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>
                             {item.poids_unitaire ? item.poids_unitaire.toFixed(2) : "0.00"}
                           </td>
                           <td style={{ fontWeight: '700', color: 'var(--primary-color)' }}>
                             {item.poids_total ? item.poids_total.toFixed(2) : "0.00"}
-                          </td>
-                          <td style={{ fontWeight: '600', color: 'var(--success)' }}>
-                            {item.surface_total ? item.surface_total.toFixed(2) : "0.00"}
-                          </td>
-                          <td style={{ width: '18%' }}>
-                            <span className={`badge ${
-                              item.assemblage.includes('Soudé') ? 'badge-purple' : 
-                              item.assemblage.includes('Gousset') ? 'badge-green' : 'badge-blue'
-                            }`}>
-                              {item.assemblage}
-                            </span>
                           </td>
                         </tr>
                       ))}
