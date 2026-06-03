@@ -166,46 +166,12 @@ async def extract(
 
         all_results: list[VisionResult] = []
 
-        if mode == "llamaparse" or mode == "hybrid":
-            logger.info("Parsing PDF with LlamaParse...")
-            markdown_content = _llamaparse.parse_to_markdown(str(tmp_path))
-            # Pass markdown to Text LLM (Gemini 2.5)
-            result = _text_llm.analyze(markdown_content, context=context)
-            all_results.append(result)
-        else:
-            try:
-                from engines.pdf_text_extractor import PDFTextExtractor
-                _text_extractor = PDFTextExtractor()
-                extracted_pages = _text_extractor.extract_all_pages(str(tmp_path))
-                
-                if pages != 'all':
-                    requested = {int(p.strip()) for p in pages.split(',')}
-                    extracted_pages = [p for p in extracted_pages if p.page_number in requested]
+        from engines.pdf_llm_engine import PDFLLMEngine
+        _pdf_engine = PDFLLMEngine()
 
-                if not extracted_pages:
-                    raise HTTPException(status_code=400, detail="No valid pages found")
-            except Exception as e:
-                logger.error(f"Error loading PDF: {e}")
-                raise HTTPException(status_code=400, detail=str(e))
-
-            for p_text in extracted_pages:
-                if mode == "regex":
-                    logger.info("Regex mode — page %d", p_text.page_number)
-                    continue
-
-                if len(p_text.text_content.strip()) > 100:
-                    logger.info(f"Page {p_text.page_number}: Vector text found ({len(p_text.text_content)} chars). Using Text LLM.")
-                    result = _text_llm.analyze(p_text.text_content, context=context)
-                    all_results.append(result)
-                else:
-                    logger.info(f"Page {p_text.page_number}: No text found. Falling back to Vision LLM.")
-                    page_img = _parser.render_page(str(tmp_path), p_text.page_number)
-                    result = _vision.analyze(
-                        page_img.image,
-                        page_number=page_img.page_number,
-                        context=context,
-                    )
-                    all_results.append(result)
+        logger.info("Using Universal NATIVE PDF AI routing for the entire document.")
+        result = _pdf_engine.analyze(str(tmp_path), context=context)
+        all_results.append(result)
 
         if not all_results:
             raise HTTPException(status_code=422, detail="No profiles extracted — check PDF and API keys")
@@ -280,18 +246,8 @@ async def extract_async(
                 tmp.write(file_bytes)
                 tmp_path = Path(tmp.name)
             
-            try:
-                from engines.pdf_text_extractor import PDFTextExtractor
-                _text_extractor = PDFTextExtractor()
-                extracted_pages = _text_extractor.extract_all_pages(str(tmp_path))
-                
-                if pages != 'all':
-                    requested = {int(p.strip()) for p in pages.split(',')}
-                    extracted_pages = [p for p in extracted_pages if p.page_number in requested]
-
-                if not extracted_pages:
-                    TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No valid pages found'}
-                    return
+                from engines.pdf_llm_engine import PDFLLMEngine
+                _pdf_engine = PDFLLMEngine()
 
                 context = {
                     'project': project,
@@ -299,17 +255,10 @@ async def extract_async(
                     'scale_hint': scale_hint or 'unknown',
                 }
 
-                all_results = []
-                for p_text in extracted_pages:
-                    logger.info(f"Page {p_text.page_number}: Using Universal Vision AI routing.")
-                    # Render just this page
-                    page_img = _parser.render_page(str(tmp_path), p_text.page_number)
-                    result = _vision.analyze(
-                        page_img.image,
-                        page_number=page_img.page_number,
-                        context=context,
-                    )
-                    all_results.append(result)
+                logger.info("Using Universal NATIVE PDF AI routing for the entire document.")
+                result = _pdf_engine.analyze(str(tmp_path), context=context)
+                
+                all_results = [result]
 
                 if not all_results:
                     TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
