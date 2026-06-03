@@ -71,14 +71,43 @@ class PDFLLMEngine:
                 "generationConfig": {
                     "temperature": 0.0,
                     "maxOutputTokens": 8192,
-                    "responseMimeType": "application/json"
+                    "responseMimeType": "application/json",
+                    "responseSchema": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "scale_detected": {"type": "STRING"},
+                            "profiles": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "id": {"type": "STRING"},
+                                        "type": {"type": "STRING"},
+                                        "designation": {"type": "STRING"},
+                                        "role": {"type": "STRING"},
+                                        "length_m": {"type": "NUMBER"},
+                                        "quantity": {"type": "INTEGER"},
+                                        "zone": {"type": "STRING"},
+                                        "confidence": {"type": "NUMBER"}
+                                    },
+                                    "required": ["designation", "quantity", "length_m", "role"]
+                                }
+                            }
+                        }
+                    }
                 },
                 "systemInstruction": {
                     "parts": [{"text": SYSTEM_PROMPT}]
                 }
             }
-            
-            models_to_try = ["gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-2.0-flash"]
+            models_to_try = [
+                "gemini-2.5-pro",
+                "gemini-3.1-pro-preview",
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-pro",
+                "gemini-1.5-flash"
+            ]
             resp = None
             for model_name in models_to_try:
                 logger.info(f"Trying model {model_name}...")
