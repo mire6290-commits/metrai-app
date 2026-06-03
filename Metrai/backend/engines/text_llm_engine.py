@@ -66,34 +66,8 @@ class TextLLMEngine:
             raw_json = response.content[0].text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
         else:
-            import requests
-            from engines.api_keys import get_random_gemini_key
-            api_key = get_random_gemini_key()
-                
-            logger.info("Sending text to Gemini (raw REST)...")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+            raw_json = self._call_gemini_text(user_msg)
             
-            payload = {
-                "contents": [{"parts": [{"text": user_msg}]}],
-                "generationConfig": {
-                    "temperature": 0.0,
-                    "responseMimeType": "application/json"
-                },
-                "systemInstruction": {
-                    "parts": [{"text": SYSTEM_PROMPT}]
-                }
-            }
-            
-            resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
-            if not resp.ok:
-                logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
-                resp.raise_for_status()
-                
-            data = resp.json()
-            raw_json = data["candidates"][0]["content"]["parts"][0]["text"]
-            raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            logger.info(f"Raw JSON from LLM: {raw_json}")
-        
         # Parse JSON
         try:
             data = json.loads(raw_json)
@@ -146,3 +120,36 @@ class TextLLMEngine:
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {raw_json}")
             raise ValueError("LLM did not return valid JSON") from e
+
+    from tenacity import retry, stop_after_attempt, wait_exponential
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _call_gemini_text(self, user_msg: str) -> str:
+        import requests
+        from engines.api_keys import get_random_gemini_key
+        api_key = get_random_gemini_key()
+            
+        logger.info(f"Sending text to Gemini (raw REST)... Using key ending in {api_key[-4:]}")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+        
+        payload = {
+            "contents": [{"parts": [{"text": user_msg}]}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json"
+            },
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            }
+        }
+        
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
+        if not resp.ok:
+            logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
+            resp.raise_for_status()
+            
+        data = resp.json()
+        raw_json = data["candidates"][0]["content"]["parts"][0]["text"]
+        raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        return raw_json
+
