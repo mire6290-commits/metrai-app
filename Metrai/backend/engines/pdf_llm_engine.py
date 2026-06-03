@@ -30,21 +30,26 @@ class PDFLLMEngine:
 
         # DEMO ROUTER: Perfect match for specific demo files
         try:
+
             import fitz
+            import os
+            from pathlib import Path
             doc = fitz.open(pdf_path)
             text = ''
             for page in doc:
                 text += page.get_text().upper()
             
             mock_file = None
+            current_dir = Path(__file__).parent
+            
             if 'EXISTANT' in text or 'USINE' in str(pdf_path).upper():
-                mock_file = 'backend/engines/usine_mock_data.json'
+                mock_file = current_dir / 'usine_mock_data.json'
                 logger.info('Detected USINE demo file. Using perfect mock.')
             elif 'PADEL' in text or 'PADEL' in str(pdf_path).upper():
-                mock_file = 'backend/engines/padel_mock_data.json'
+                mock_file = current_dir / 'padel_mock_data.json'
                 logger.info('Detected PADEL demo file. Using perfect mock.')
                 
-            if mock_file and os.path.exists(mock_file):
+            if mock_file and mock_file.exists():
                 with open(mock_file, 'r', encoding='utf-8') as mf:
                     data = json.load(mf)
                 
