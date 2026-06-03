@@ -236,10 +236,9 @@ class VisionLLMEngine:
         import requests
         import io
         import base64
+        from engines.api_keys import get_random_gemini_key
 
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise EnvironmentError("GEMINI_API_KEY not set")
+        api_key = get_random_gemini_key()
 
         logger.info("Converting image to JPEG for Gemini API...")
         buf = io.BytesIO()

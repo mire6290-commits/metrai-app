@@ -67,9 +67,8 @@ class TextLLMEngine:
 
         else:
             import requests
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                raise EnvironmentError("GEMINI_API_KEY not set")
+            from engines.api_keys import get_random_gemini_key
+            api_key = get_random_gemini_key()
                 
             logger.info("Sending text to Gemini (raw REST)...")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
