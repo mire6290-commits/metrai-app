@@ -246,6 +246,7 @@ async def extract_async(
                 tmp.write(file_bytes)
                 tmp_path = Path(tmp.name)
             
+            try:
                 from engines.pdf_llm_engine import PDFLLMEngine
                 _pdf_engine = PDFLLMEngine()
 
