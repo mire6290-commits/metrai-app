@@ -74,7 +74,11 @@ Pour chaque élément repéré :
 - 'quantity': Le nombre de fois que cet élément apparaît. Cherchez les multiplicateurs (ex: '4x', '14 UPN', '256 MONTANT', etc.) ou déduisez-le du nombre de travées/portiques.
 - 'length_m': La longueur de la pièce en mètres (convertissez les millimètres).
 
-Vous êtes un expert métier. Ne ratez aucun détail. Parcourez chaque vue, chaque coupe, et chaque détail (Détail A, Coupe E-E, etc.)."""
+Vous êtes un expert métier. Ne ratez aucun détail. Parcourez chaque vue, chaque coupe, et chaque détail (Détail A, Coupe E-E, etc.).
+
+INSTRUCTION CRITIQUE ANTI-PARESSE (ANTI-LAZINESS) :
+Il est strictement INTERDIT de résumer, de tronquer, ou d'omettre des éléments. 
+Vous DEVEZ extraire la totalité des éléments de la nomenclature, même s'il y en a plus de 100 ou 200. Ne vous arrêtez pas au milieu. La vie humaine dépend de la précision absolue de ce métré. Parcourez la nomenclature ligne par ligne et convertissez CHAQUE ligne en objet JSON."""
             user_msg += "\n\nCRITIQUE: Vous DEVEZ répondre UNIQUEMENT avec un objet JSON valide, contenu dans un bloc ```json ... ```. Voici la structure attendue :\n"
             user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau"}]}'
             
