@@ -1,0 +1,228 @@
+{
+  "profiles": [
+    {
+      "id": "P000",
+      "role": "POTEAU",
+      "designation": "IPE500",
+      "quantity": 20,
+      "length_m": 11.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P001",
+      "role": "Potlet",
+      "designation": "IPE270",
+      "quantity": 4,
+      "length_m": 11.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P002",
+      "role": "Potlet",
+      "designation": "IPE270",
+      "quantity": 4,
+      "length_m": 11.5,
+      "confidence": 0.99
+    },
+    {
+      "id": "P003",
+      "role": "Potlet",
+      "designation": "IPE270",
+      "quantity": 2,
+      "length_m": 12.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P004",
+      "role": "POUTRE",
+      "designation": "IPE450",
+      "quantity": 20,
+      "length_m": 16.86,
+      "confidence": 0.99
+    },
+    {
+      "id": "P005",
+      "role": "POUTRE-JARRET",
+      "designation": "IPE450",
+      "quantity": 20,
+      "length_m": 2.1,
+      "confidence": 0.99
+    },
+    {
+      "id": "P006",
+      "role": "SABLIERE",
+      "designation": "HEA120",
+      "quantity": 32,
+      "length_m": 6.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P007",
+      "role": "SABLIERE",
+      "designation": "HEA120",
+      "quantity": 4,
+      "length_m": 3.74,
+      "confidence": 0.99
+    },
+    {
+      "id": "P008",
+      "role": "PANNE",
+      "designation": "IPE120",
+      "quantity": 88,
+      "length_m": 12.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P009",
+      "role": "PANNE",
+      "designation": "IPE120",
+      "quantity": 22,
+      "length_m": 3.74,
+      "confidence": 0.99
+    },
+    {
+      "id": "P010",
+      "role": "LISSE",
+      "designation": "IPE120",
+      "quantity": 32,
+      "length_m": 12.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P011",
+      "role": "LISSE",
+      "designation": "IPE120",
+      "quantity": 12,
+      "length_m": 3.74,
+      "confidence": 0.99
+    },
+    {
+      "id": "P012",
+      "role": "LISSE PORTIQUE",
+      "designation": "IPE120",
+      "quantity": 36,
+      "length_m": 11.5,
+      "confidence": 0.99
+    },
+    {
+      "id": "P013",
+      "role": "CVT",
+      "designation": "L60*6",
+      "quantity": 48,
+      "length_m": 8.205,
+      "confidence": 0.99
+    },
+    {
+      "id": "P014",
+      "role": "CVT",
+      "designation": "L60*6",
+      "quantity": 36,
+      "length_m": 6.58,
+      "confidence": 0.99
+    },
+    {
+      "id": "P015",
+      "role": "Acrotere",
+      "designation": "HEA140",
+      "quantity": 30,
+      "length_m": 2.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P016",
+      "role": "LIERNES",
+      "designation": "D12",
+      "quantity": 224,
+      "length_m": 1.7,
+      "confidence": 0.99
+    },
+    {
+      "id": "P017",
+      "role": "LIERNES",
+      "designation": "D12",
+      "quantity": 32,
+      "length_m": 3.38,
+      "confidence": 0.99
+    },
+    {
+      "id": "P018",
+      "role": "TIGE D'ANCRAGE",
+      "designation": "ROND \u00d830",
+      "quantity": 160,
+      "length_m": 1.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P019",
+      "role": "TIGE D'ANCRAGE",
+      "designation": "ROND \u00d830",
+      "quantity": 20,
+      "length_m": 1.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P020",
+      "role": "CLE D'ANCRAGE",
+      "designation": "ROND \u00d835",
+      "quantity": 40,
+      "length_m": 1.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P021",
+      "role": "PLATINE PT",
+      "designation": "TN750*600*20",
+      "quantity": 20,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P022",
+      "role": "PLATINE POTELET",
+      "designation": "TN310*190*20",
+      "quantity": 20,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P023",
+      "role": "PLATINE  PR",
+      "designation": "TN870*250*20",
+      "quantity": 40,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P024",
+      "role": "RAID PT/PT ET GOUSSET",
+      "designation": "TN470*94*10",
+      "quantity": 40,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P025",
+      "role": "RAID PT/PT ET GOUSSET",
+      "designation": "TN435*90*10",
+      "quantity": 80,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P026",
+      "role": "ECHANTIGNOLE",
+      "designation": "TN2000*1000*08",
+      "quantity": 9,
+      "length_m": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P027",
+      "role": "CVT",
+      "designation": "TN2000*1000*08",
+      "quantity": 7,
+      "length_m": null,
+      "confidence": 0.99
+    }
+  ]
+}

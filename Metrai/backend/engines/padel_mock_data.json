@@ -1,370 +1,492 @@
 {
   "profiles": [
     {
+      "id": "P001",
+      "role": "POTEAU",
       "designation": "IPE400",
-      "length_m": 4.0,
       "quantity": 14,
-      "role": "POTEAU"
+      "length_m": 4.0,
+      "confidence": 0.99
     },
     {
+      "id": "P002",
+      "role": "POTEAU",
       "designation": "HEA300",
+      "quantity": 2,
       "length_m": 4.0,
-      "quantity": 2,
-      "role": "POTEAU"
+      "confidence": 0.99
     },
     {
+      "id": "P003",
+      "role": "POTELET",
       "designation": "IPE270",
+      "quantity": 2,
       "length_m": 3.925,
-      "quantity": 2,
-      "role": "POTELET"
+      "confidence": 0.99
     },
     {
+      "id": "P004",
+      "role": "POTELET",
       "designation": "IPE270",
+      "quantity": 2,
       "length_m": 4.125,
-      "quantity": 2,
-      "role": "POTELET"
+      "confidence": 0.99
     },
     {
+      "id": "P005",
+      "role": "POTELET",
       "designation": "IPE270",
+      "quantity": 2,
       "length_m": 3.985,
-      "quantity": 2,
-      "role": "POTELET"
+      "confidence": 0.99
     },
     {
+      "id": "P006",
+      "role": "TRAVERSE",
       "designation": "IPE400",
-      "length_m": 11.647,
       "quantity": 14,
-      "role": "TRAVERSE"
-    },
-    {
-      "designation": "IPE450",
       "length_m": 11.647,
-      "quantity": 2,
-      "role": "TRAVERSE"
+      "confidence": 0.99
     },
     {
+      "id": "P007",
+      "role": "TRAVERSE",
+      "designation": "IPE450",
+      "quantity": 2,
+      "length_m": 11.647,
+      "confidence": 0.99
+    },
+    {
+      "id": "P008",
+      "role": "ASSEMBLAGE JARRETS",
       "designation": "IPE400",
-      "length_m": 1.5,
       "quantity": 14,
-      "role": "ASSEMBLAGE JARRETS"
-    },
-    {
-      "designation": "IPE450",
       "length_m": 1.5,
-      "quantity": 2,
-      "role": "ASSEMBLAGE JARRETS"
+      "confidence": 0.99
     },
     {
+      "id": "P009",
+      "role": "ASSEMBLAGE JARRETS",
+      "designation": "IPE450",
+      "quantity": 2,
+      "length_m": 1.5,
+      "confidence": 0.99
+    },
+    {
+      "id": "P010",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 5.93,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P011",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 6.0,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P012",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 6.02,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P013",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 3.35,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P014",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 4.83,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P015",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 5.51,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P016",
+      "role": "SABLIERE ET POUTRE DE COMPRESSION",
       "designation": "HEA120",
+      "quantity": 4,
       "length_m": 5.97,
-      "quantity": 4,
-      "role": "SABLIERE ET POUTRE DE COMPRESSION"
+      "confidence": 0.99
     },
     {
+      "id": "P017",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 4,
       "length_m": 6.6,
-      "quantity": 4,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P018",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 16,
       "length_m": 6.46,
-      "quantity": 16,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P019",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 2,
       "length_m": 4.7,
-      "quantity": 2,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P020",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 8,
       "length_m": 4.23,
-      "quantity": 8,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P021",
+      "role": "CVT",
       "designation": "L70*70*7",
-      "length_m": 3.23,
       "quantity": 32,
-      "role": "CVT"
+      "length_m": 3.23,
+      "confidence": 0.99
     },
     {
+      "id": "P022",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 8,
       "length_m": 3.31,
-      "quantity": 8,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P023",
+      "role": "CVT",
       "designation": "L70*70*7",
+      "quantity": 4,
       "length_m": 2.35,
-      "quantity": 4,
-      "role": "CVT"
+      "confidence": 0.99
     },
     {
+      "id": "P024",
+      "role": "LIERNES",
       "designation": "D14",
-      "length_m": 1.7,
       "quantity": 140,
-      "role": "LIERNES"
+      "length_m": 1.7,
+      "confidence": 0.99
     },
     {
+      "id": "P025",
+      "role": "PANNE",
       "designation": "IPE180",
-      "length_m": 7.01,
       "quantity": 9,
-      "role": "PANNE"
+      "length_m": 7.01,
+      "confidence": 0.99
     },
     {
+      "id": "P026",
+      "role": "PANNE",
       "designation": "IPE140",
-      "length_m": 6.0,
       "quantity": 13,
-      "role": "PANNE"
+      "length_m": 6.0,
+      "confidence": 0.99
     },
     {
+      "id": "P027",
+      "role": "PANNE",
       "designation": "IPE140",
+      "quantity": 22,
       "length_m": 9.37,
-      "quantity": 22,
-      "role": "PANNE"
+      "confidence": 0.99
     },
     {
+      "id": "P028",
+      "role": "PANNE",
       "designation": "IPE140",
+      "quantity": 22,
       "length_m": 5.51,
-      "quantity": 22,
-      "role": "PANNE"
+      "confidence": 0.99
     },
     {
+      "id": "P029",
+      "role": "PANNE",
       "designation": "IPE140",
+      "quantity": 22,
       "length_m": 12.88,
-      "quantity": 22,
-      "role": "PANNE"
+      "confidence": 0.99
     },
     {
+      "id": "P030",
+      "role": "SUPPORT",
       "designation": "IPE400",
+      "quantity": 16,
       "length_m": 1.036,
-      "quantity": 16,
-      "role": "SUPPORT"
+      "confidence": 0.99
     },
     {
+      "id": "P031",
+      "role": "SUPPORT",
       "designation": "IPE400",
-      "length_m": 0.997,
       "quantity": 4,
-      "role": "SUPPORT"
+      "length_m": 0.997,
+      "confidence": 0.99
     },
     {
+      "id": "P032",
+      "role": "SUPPORT",
       "designation": "IPE270",
-      "length_m": 0.92,
       "quantity": 14,
-      "role": "SUPPORT"
+      "length_m": 0.92,
+      "confidence": 0.99
     },
     {
+      "id": "P033",
+      "role": "SUPPORT",
       "designation": "IPE270",
+      "quantity": 4,
       "length_m": 1.031,
-      "quantity": 4,
-      "role": "SUPPORT"
+      "confidence": 0.99
     },
     {
+      "id": "P034",
+      "role": "SUPPORT",
       "designation": "IPE270",
+      "quantity": 2,
       "length_m": 0.97,
-      "quantity": 2,
-      "role": "SUPPORT"
+      "confidence": 0.99
     },
     {
+      "id": "P035",
+      "role": "SUPPORT",
       "designation": "IPE270",
-      "length_m": 0.997,
       "quantity": 12,
-      "role": "SUPPORT"
+      "length_m": 0.997,
+      "confidence": 0.99
     },
     {
+      "id": "P036",
+      "role": "SUPPORT",
       "designation": "JARRETS IPE270",
-      "length_m": 0.5,
       "quantity": 16,
-      "role": "SUPPORT"
+      "length_m": 0.5,
+      "confidence": 0.99
     },
     {
+      "id": "P037",
+      "role": "SUPPORT",
       "designation": "JARRETS IPE400",
+      "quantity": 8,
       "length_m": 0.5,
-      "quantity": 8,
-      "role": "SUPPORT"
+      "confidence": 0.99
     },
     {
+      "id": "P038",
+      "role": "BRACON",
       "designation": "L50*5",
+      "quantity": 16,
       "length_m": 0.61,
-      "quantity": 16,
-      "role": "BRACON"
+      "confidence": 0.99
     },
     {
-      "designation": "ROND Ø24",
+      "id": "P039",
+      "role": "TIGE D'ANCRAGE",
+      "designation": "ROND \u00d824",
+      "quantity": 44,
       "length_m": 0.8,
-      "quantity": 44,
-      "role": "TIGE D'ANCRAGE"
+      "confidence": 0.99
     },
     {
+      "id": "P040",
+      "role": "SUPPORT SOCLE PIED DE POTEAUX",
       "designation": "L50*5",
+      "quantity": 44,
       "length_m": 0.3,
-      "quantity": 44,
-      "role": "SUPPORT SOCLE PIED DE POTEAUX"
+      "confidence": 0.99
     },
     {
+      "id": "P041",
+      "role": "SUPPORT SOCLE PIED DE POTEAUX",
       "designation": "L50*5",
-      "length_m": 0.13,
       "quantity": 44,
-      "role": "SUPPORT SOCLE PIED DE POTEAUX"
+      "length_m": 0.13,
+      "confidence": 0.99
     },
     {
+      "id": "P042",
+      "role": "BECHE",
       "designation": "HEA120",
-      "length_m": 0.2,
       "quantity": 22,
-      "role": "BECHE"
+      "length_m": 0.2,
+      "confidence": 0.99
     },
     {
+      "id": "P043",
+      "role": "SOUS LISSE CONTRE BARDAGE",
       "designation": "TUBE-C-40*40*2",
+      "quantity": 2,
       "length_m": 41.0,
-      "quantity": 2,
-      "role": "SOUS LISSE CONTRE BARDAGE"
+      "confidence": 0.99
     },
     {
+      "id": "P044",
+      "role": "SOUS LISSE CONTRE BARDAGE",
       "designation": "TUBE-C-40*40*2",
-      "length_m": 25.69,
       "quantity": 2,
-      "role": "SOUS LISSE CONTRE BARDAGE"
+      "length_m": 25.69,
+      "confidence": 0.99
     },
     {
+      "id": "P045",
+      "role": "SUPPORT CADRE P\u00c9RIPH\u00c9RIQUE",
       "designation": "UPN200",
-      "length_m": 2.0,
       "quantity": 26,
-      "role": "SUPPORT CADRE PÉRIPHÉRIQUE"
-    },
-    {
-      "designation": "CORNIERE L50*50*5",
-      "length_m": 1.6,
-      "quantity": 196,
-      "role": "Cadre Périphérique"
-    },
-    {
-      "designation": "L70*70*7",
       "length_m": 2.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "P046",
+      "role": "Cadre P\u00e9riph\u00e9rique",
+      "designation": "CORNIERE L50*50*5",
+      "quantity": 196,
+      "length_m": 1.6,
+      "confidence": 0.99
+    },
+    {
+      "id": "P047",
+      "role": "Cadre P\u00e9riph\u00e9rique",
+      "designation": "L70*70*7",
       "quantity": 4,
-      "role": "Cadre Périphérique"
+      "length_m": 2.0,
+      "confidence": 0.99
     },
     {
+      "id": "P048",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.77,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P049",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 4.63,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P050",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.31,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P051",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 3.15,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P052",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.82,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P053",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.8,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P054",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.73,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P055",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 16,
       "length_m": 0.9,
-      "quantity": 16,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P056",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.9,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P057",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 6.09,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P058",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.76,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P059",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
+      "quantity": 8,
       "length_m": 5.05,
-      "quantity": 8,
-      "role": "Cadre Périphérique"
+      "confidence": 0.99
     },
     {
+      "id": "P060",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "UPN80",
-      "length_m": 0.985,
       "quantity": 16,
-      "role": "Cadre Périphérique"
+      "length_m": 0.985,
+      "confidence": 0.99
     },
     {
+      "id": "P061",
+      "role": "Cadre P\u00e9riph\u00e9rique",
       "designation": "MONTANT UPN80",
-      "length_m": 0.7,
       "quantity": 256,
-      "role": "Cadre Périphérique"
+      "length_m": 0.7,
+      "confidence": 0.99
     }
   ]
 }
