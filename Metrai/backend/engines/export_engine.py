@@ -33,13 +33,29 @@ class ExportEngine:
             top=Side(style='thin'), bottom=Side(style='thin')
         )
 
+        from datetime import datetime
+        
+        # En-têtes style Expert
+        ws.cell(row=2, column=4, value="Client:").font = Font(bold=True)
+        # Default client name or passed project name. For now we use the generic one or try to extract from data
+        client_name = "METRAI EXPERT"
+        ws.cell(row=2, column=5, value=client_name).font = Font(bold=True)
+        
+        ws.cell(row=2, column=7, value="Le:").font = Font(bold=True)
+        ws.cell(row=2, column=8, value=datetime.now().strftime("%d/%m/%Y")).font = Font(bold=True)
+        
+        ws.cell(row=4, column=4, value="POIDS NET").font = Font(bold=True, size=12)
+        ws.cell(row=4, column=8, value="POIDS BRUT").font = Font(bold=True, size=12)
+        
+        ws.cell(row=5, column=4, value="1- Ossature métallique :").font = Font(bold=True, underline="single")
+        
         headers = [
             "Pos", "Nomenclatures", "Quantité", "Designation", 
             "Long (mm)", "Poids Kg/(m)", "Poids Kg/Unt", "Poids Tot Kg"
         ]
         
         for col_num, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_num, value=header)
+            cell = ws.cell(row=7, column=col_num, value=header)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = center_align
@@ -54,7 +70,7 @@ class ExportEngine:
         # Tri pour groupby par role (Nomenclature)
         data_sorted = sorted(data, key=lambda x: str(x.get('role', '')).upper())
         
-        current_row = 2
+        current_row = 8
         pos = 1
         total_sum_kg = 0.0
         
