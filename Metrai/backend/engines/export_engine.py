@@ -137,11 +137,10 @@ class ExportEngine:
         ws.cell(row=current_row, column=2).alignment = center_align
         ws.cell(row=current_row, column=3, value="5%").alignment = center_align
         
-        boulonnerie_cell_row = current_row
-        if last_data_row >= 2:
-            # Excel formula: 5% of the sum of column H
-            f_boul = f"=0.05*SUM(H2:H{last_data_row})"
-            ws.cell(row=current_row, column=8, value=f_boul).border = thin_border
+        boulonnerie_val = total_sum_kg * 0.05
+        c_boul = ws.cell(row=current_row, column=8, value=round(boulonnerie_val, 3))
+        c_boul.border = thin_border
+        c_boul.alignment = center_align
         
         current_row += 1
         
@@ -149,17 +148,17 @@ class ExportEngine:
         total_cell = ws.cell(row=current_row, column=7, value="Poids Tot Net en Kg")
         total_cell.font = Font(bold=True, italic=True)
         total_cell.fill = PatternFill(start_color="8DB4E2", end_color="8DB4E2", fill_type="solid")
+        total_cell.alignment = Alignment(horizontal="right", vertical="center")
         
-        if last_data_row >= 2:
-            # Excel formula: sum of column H + Boulonnerie cell
-            f_final = f"=SUM(H2:H{last_data_row})+H{boulonnerie_cell_row}"
-            final_sum_cell = ws.cell(row=current_row, column=8, value=f_final)
-            final_sum_cell.font = Font(bold=True)
-            final_sum_cell.fill = PatternFill(start_color="FCD5B4", end_color="FCD5B4", fill_type="solid")
-            final_sum_cell.border = thin_border
+        total_net_val = total_sum_kg + boulonnerie_val
+        final_sum_cell = ws.cell(row=current_row, column=8, value=round(total_net_val, 3))
+        final_sum_cell.font = Font(bold=True)
+        final_sum_cell.fill = PatternFill(start_color="FCD5B4", end_color="FCD5B4", fill_type="solid")
+        final_sum_cell.border = thin_border
+        final_sum_cell.alignment = center_align
 
         # Ajustement des largeurs
-        col_widths = {'A': 5, 'B': 30, 'C': 10, 'D': 25, 'E': 15, 'F': 15, 'G': 15, 'H': 15}
+        col_widths = {'A': 5, 'B': 30, 'C': 10, 'D': 25, 'E': 15, 'F': 15, 'G': 20, 'H': 20}
         for col, width in col_widths.items():
             ws.column_dimensions[col].width = width
 
