@@ -56,8 +56,8 @@ class PDFLLMEngine:
                 user_msg += f"Project: {context['project']}\n"
             if context.get("ref"):
                 user_msg += f"Ref: {context['ref']}\n"
-            
             user_msg += "\n\nCRITICAL: DO NOT STOP EARLY. You must extract EVERY SINGLE profile listed in the table. Do not truncate the JSON list."
+            user_msg += "\nCRITICAL: Pay extreme attention to the 'quantity' (Nombre/Qté) and 'length_m' (Longueur en mètres). If they are present in the table, you MUST extract them."
             
             payload = {
                 "contents": [
@@ -78,7 +78,7 @@ class PDFLLMEngine:
                 }
             }
             
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+            models_to_try = ["gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-2.0-flash"]
             resp = None
             for model_name in models_to_try:
                 logger.info(f"Trying model {model_name}...")
