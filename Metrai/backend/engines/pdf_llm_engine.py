@@ -90,7 +90,7 @@ class PDFLLMEngine:
                                         "zone": {"type": "STRING"},
                                         "confidence": {"type": "NUMBER"}
                                     },
-                                    "required": ["designation", "quantity", "length_m", "role"]
+                                    "required": ["designation"]
                                 }
                             }
                         }
