@@ -76,8 +76,13 @@ class ExportEngine:
                 ws.cell(row=current_row, column=4, value=str(item.get('designation', item.get('profil', '')))).alignment = center_align
                 ws.cell(row=current_row, column=4).border = thin_border
                 
-                val_long = item.get('length_m', item.get('longueur', 0))
-                if val_long is not None and val_long > 0:
+                val_long_raw = item.get('length_m', item.get('longueur', 0))
+                try:
+                    val_long = float(val_long_raw) if val_long_raw else 0.0
+                except (ValueError, TypeError):
+                    val_long = 0.0
+                    
+                if val_long > 0:
                     val_long_mm = val_long * 1000 if 'length_m' in item else val_long
                 else:
                     val_long_mm = 0
@@ -247,10 +252,15 @@ class ExportEngine:
             total_poids += poids_t
             total_surf += surf_t
             
+            try:
+                longueur_float = float(item.get('longueur', 0.0) or 0.0)
+            except (ValueError, TypeError):
+                longueur_float = 0.0
+
             table_data.append([
                 Paragraph(str(item.get("repere", "N/A")), td_style),
                 Paragraph(str(item.get("profil", "Inconnu")), td_style),
-                Paragraph(f"{item.get('longueur', 0.0):,.0f}", td_style),
+                Paragraph(f"{longueur_float:,.0f}", td_style),
                 Paragraph(str(qty), td_style),
                 Paragraph(f"{item.get('poids_unitaire', 0.0):,.2f}", td_style),
                 Paragraph(f"{poids_t:,.2f}", td_style),
