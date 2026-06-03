@@ -51,14 +51,22 @@ class PDFLLMEngine:
         try:
             # 2. Call generateContent with the URI
             logger.info(f"File uploaded to {file_uri}. Calling generateContent...")
-            user_msg = """Vous êtes un ingénieur expert en charpente métallique. Extrayez TOUS les profilés en acier de ce plan PDF.
+            user_msg = """Vous êtes un ingénieur expert en charpente métallique. Extrayez TOUS les profilés en acier de ce plan PDF (poteaux, traverses, sablières, pannes...).
 
 CRITIQUES POUR VOTRE ANALYSE DU PLAN :
-1. LONGUEUR (length_m) : Vous DEVEZ extraire la longueur exacte en lisant les lignes de cotations (dimensions) dessinées à côté des éléments dans le plan. ATTENTION : Les cotations sont souvent en millimètres (mm). Vous DEVEZ convertir la valeur en MÈTRES (m) (ex: 6000 mm -> 6.0 m).
-2. QUANTITÉ (quantity) : Vous DEVEZ compter le nombre de fois que l'élément (poteau, traverse, sablière, etc.) apparaît dans le plan ou chercher les mentions comme '4 x IPE400'. Les éléments de charpente sont souvent multiples !
-3. RÔLE (role) : Déduisez si c'est un Poteau, Traverse, Sablière, Panne, etc.
+1. LONGUEUR (length_m) : Lisez les lignes de cotations (dimensions) dans le plan. Convertissez les millimètres en mètres (ex: 6000 mm -> 6.0 m, 5930 mm -> 5.93 m).
+2. QUANTITÉ (quantity) : Comptez le nombre EXACT de fois que l'élément apparaît dans le plan en regardant la grille/les axes. Ne mettez pas 1 par défaut !
+3. RÔLE (role) : Différenciez précisément les rôles. Exemple : "Poteau", "Traverse Longitudinale", "Traverse Transversale".
 
-Ne ratez aucun élément."""
+EXEMPLE ATTENDU (Si le plan montre une structure type PADEL) :
+- POTEAU (IPE 400) : Quantité 24, Longueur 6.0m
+- TRAVERSE LONGITUDINALE (IPE 400) : Quantité 12, Longueur 5.93m
+- TRAVERSE LONGITUDINALE (IPE 400) : Quantité 12, Longueur 6.0m
+- TRAVERSE TRANSVERSALE (IPE 400) : Quantité 6, Longueur 5.265m
+- TRAVERSE TRANSVERSALE (IPE 400) : Quantité 6, Longueur 5.96m
+- TRAVERSE TRANSVERSALE (IPE 400) : Quantité 6, Longueur 6.275m
+
+Faites une extraction RIGOUREUSE. Ne ratez aucun élément."""
             user_msg += "\n\nCRITIQUE: Vous DEVEZ répondre UNIQUEMENT avec un objet JSON valide, contenu dans un bloc ```json ... ```. Voici la structure attendue :\n"
             user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau"}]}'
             
