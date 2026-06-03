@@ -72,7 +72,7 @@ Ne ratez aucun élément."""
                     }
                 ],
                 "generationConfig": {
-                    "temperature": 0.0,
+                    "temperature": 0.2,
                     "maxOutputTokens": 8192
                 },
                 "systemInstruction": {
@@ -102,53 +102,66 @@ Ne ratez aucun élément."""
             # Parse JSON
             try:
                 parsed_data = json.loads(raw_json)
-                
-                # If the LLM just returned a list of profiles
-                if isinstance(parsed_data, list):
-                    parsed_data = {"profiles": parsed_data}
-                    
-                profiles = []
-                for p in parsed_data.get("profiles", []):
-                    # Standardize keys
-                    if "profile" in p and "designation" not in p:
-                        p["designation"] = p["profile"]
-                    if "designation" in p and "type" not in p:
-                        desig = str(p["designation"]).upper()
-                        if "IPE" in desig: p["type"] = "IPE"
-                        elif "HEA" in desig: p["type"] = "HEA"
-                        elif "HEB" in desig: p["type"] = "HEB"
-                        elif "UPN" in desig: p["type"] = "UPN"
-                        elif "L" in desig or "CORNI" in desig: p["type"] = "ANGLE"
-                        else: p["type"] = "OTHER"
-                    
-                    try:
-                        profiles.append(DetectedProfile(
-                            id=p.get("id", "P000"),
-                            type=p.get("type", "unknown"),
-                            designation=p.get("designation", ""),
-                            role=p.get("role", ""),
-                            length_m=p.get("length_m"),
-                            quantity=int(p.get("quantity", 1)),
-                            zone=p.get("zone", ""),
-                            confidence=float(p.get("confidence", 0.8)),
-                            bbox_normalized=p.get("bbox_normalized", [])
-                        ))
-                    except Exception as e:
-                        logger.warning(f"Skipping invalid profile: {e}")
-                        
-                return VisionResult(
-                    scale_detected=parsed_data.get("scale_detected"),
-                    scale_confidence=float(parsed_data.get("scale_confidence", 0.0)),
-                    profiles=profiles,
-                    unreadable_zones=parsed_data.get("unreadable_zones", []),
-                    warnings=parsed_data.get("warnings", []),
-                    drawing_type=parsed_data.get("drawing_type", "unknown"),
-                    provider_used=self.provider,
-                    raw_response=raw_json
-                )
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON: {raw_json}")
-                raise ValueError("LLM did not return valid JSON") from e
+                logger.warning(f"JSONDecodeError encountered. Attempting to parse truncated JSON using Regex... Error: {e}")
+                import re
+                parsed_data = {"profiles": []}
+                # Find all objects that look like {"designation": "..." ... }
+                matches = re.finditer(r'\{[^{}]*"designation"[^{}]*\}', raw_json)
+                for match in matches:
+                    try:
+                        obj = json.loads(match.group(0))
+                        parsed_data["profiles"].append(obj)
+                    except json.JSONDecodeError:
+                        continue
+                
+                if not parsed_data["profiles"]:
+                    logger.error(f"Failed to parse JSON even with Regex: {raw_json}")
+                    raise ValueError("LLM did not return valid JSON") from e
+            
+            # If the LLM just returned a list of profiles
+            if isinstance(parsed_data, list):
+                parsed_data = {"profiles": parsed_data}
+                
+            profiles = []
+            for p in parsed_data.get("profiles", []):
+                # Standardize keys
+                if "profile" in p and "designation" not in p:
+                    p["designation"] = p["profile"]
+                if "designation" in p and "type" not in p:
+                    desig = str(p["designation"]).upper()
+                    if "IPE" in desig: p["type"] = "IPE"
+                    elif "HEA" in desig: p["type"] = "HEA"
+                    elif "HEB" in desig: p["type"] = "HEB"
+                    elif "UPN" in desig: p["type"] = "UPN"
+                    elif "L" in desig or "CORNI" in desig: p["type"] = "ANGLE"
+                    else: p["type"] = "OTHER"
+                
+                try:
+                    profiles.append(DetectedProfile(
+                        id=p.get("id", "P000"),
+                        type=p.get("type", "unknown"),
+                        designation=p.get("designation", ""),
+                        role=p.get("role", ""),
+                        length_m=p.get("length_m"),
+                        quantity=int(p.get("quantity", 1)),
+                        zone=p.get("zone", ""),
+                        confidence=float(p.get("confidence", 0.8)),
+                        bbox_normalized=p.get("bbox_normalized", [])
+                    ))
+                except Exception as e:
+                    logger.warning(f"Skipping invalid profile: {e}")
+                    
+            return VisionResult(
+                scale_detected=parsed_data.get("scale_detected"),
+                scale_confidence=float(parsed_data.get("scale_confidence", 0.0)),
+                profiles=profiles,
+                unreadable_zones=parsed_data.get("unreadable_zones", []),
+                warnings=parsed_data.get("warnings", []),
+                drawing_type=parsed_data.get("drawing_type", "unknown"),
+                provider_used=self.provider,
+                raw_response=raw_json
+            )
                 
         finally:
             # Try to delete the file to save space
