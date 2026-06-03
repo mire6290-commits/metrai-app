@@ -301,13 +301,16 @@ async def extract_async(
 
                 all_results = []
                 for p_text in extracted_pages:
-                    # If page has sufficient text, use the much cheaper/faster Text LLM
-                    if len(p_text.text_content.strip()) > 100:
-                        logger.info(f"Page {p_text.page_number}: Vector text found ({len(p_text.text_content)} chars). Using Text LLM.")
+                    text_len = len(p_text.text_content.strip())
+                    # Rule 1: Scanned PDF (< 100 chars) -> Vision
+                    # Rule 2: CAD drawing with excessive noise (> 10000 chars) -> Vision
+                    # Rule 3: Clean A4 text table (100 - 10000 chars) -> Text
+                    if 100 < text_len < 10000:
+                        logger.info(f"Page {p_text.page_number}: Clean text table found ({text_len} chars). Using Text LLM.")
                         result = _text_llm.analyze(p_text.text_content, context=context)
                         all_results.append(result)
                     else:
-                        logger.info(f"Page {p_text.page_number}: No text found. Falling back to Vision LLM.")
+                        logger.info(f"Page {p_text.page_number}: Text length {text_len} out of bounds. Routing to Vision LLM.")
                         # Render just this page
                         page_img = _parser.render_page(str(tmp_path), p_text.page_number)
                         result = _vision.analyze(
