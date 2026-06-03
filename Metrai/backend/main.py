@@ -301,24 +301,15 @@ async def extract_async(
 
                 all_results = []
                 for p_text in extracted_pages:
-                    text_len = len(p_text.text_content.strip())
-                    # Rule 1: Scanned PDF (< 100 chars) -> Vision
-                    # Rule 2: CAD drawing with excessive noise (> 10000 chars) -> Vision
-                    # Rule 3: Clean A4 text table (100 - 10000 chars) -> Text
-                    if 100 < text_len < 10000:
-                        logger.info(f"Page {p_text.page_number}: Clean text table found ({text_len} chars). Using Text LLM.")
-                        result = _text_llm.analyze(p_text.text_content, context=context)
-                        all_results.append(result)
-                    else:
-                        logger.info(f"Page {p_text.page_number}: Text length {text_len} out of bounds. Routing to Vision LLM.")
-                        # Render just this page
-                        page_img = _parser.render_page(str(tmp_path), p_text.page_number)
-                        result = _vision.analyze(
-                            page_img.image,
-                            page_number=page_img.page_number,
-                            context=context,
-                        )
-                        all_results.append(result)
+                    logger.info(f"Page {p_text.page_number}: Using Universal Vision AI routing.")
+                    # Render just this page
+                    page_img = _parser.render_page(str(tmp_path), p_text.page_number)
+                    result = _vision.analyze(
+                        page_img.image,
+                        page_number=page_img.page_number,
+                        context=context,
+                    )
+                    all_results.append(result)
 
                 if not all_results:
                     TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
