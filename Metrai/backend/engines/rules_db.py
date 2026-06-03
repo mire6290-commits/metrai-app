@@ -53,8 +53,25 @@ class RulesDB:
 
     def get_profile_data(self, profil: str) -> tuple:
         """Retourne le (poids, surface_peinture) au mètre pour un profil donné, ou (0.0, 0.0) si inconnu"""
-        # Nettoyage supplémentaire pour matcher les clés (ex: COR 50x50x5 -> COR50X50X5)
-        clean_profil = profil.replace(" ", "").upper()
+        clean_profil = profil.replace(" ", "").upper().replace("*", "X")
+        
+        # Mapping des Cornières (ex: L50X5 -> COR50X50X5, L70X70X7 -> COR70X70X7)
+        if clean_profil.startswith("L") or clean_profil.startswith("COR"):
+            nums = re.findall(r'\d+', clean_profil)
+            if nums:
+                n1 = nums[0]
+                if len(nums) == 2:
+                    # e.g. L 50*5 -> n1=50, n2=5 -> COR50X50X5
+                    n2 = n1
+                    n3 = nums[1]
+                elif len(nums) >= 3:
+                    n2 = nums[1]
+                    n3 = nums[2]
+                else:
+                    n2 = n1
+                    n3 = str(int(n1)//10) if int(n1) >= 10 else n1
+                clean_profil = f"COR{n1}X{n2}X{n3}"
+        
         return self.profiles_db.get(clean_profil, [0.0, 0.0])
 
     def enrich_data(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
