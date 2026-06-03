@@ -14,10 +14,8 @@ def get_random_gemini_key() -> str:
         if k.startswith("GEMINI_API_KEY") and v.strip():
             keys.append(v.strip())
             
-    # Override all keys with the new working key
-    keys = [
-        "AIzaSyCOsrep3DoIvRnkCN7j8B3udbzk-97tYbA"
-    ]
+    if not keys:
+        raise EnvironmentError("No GEMINI_API_KEY found in environment variables.")
         
     chosen = random.choice(keys)
     # Just to trace which key is used (we print partial key)
