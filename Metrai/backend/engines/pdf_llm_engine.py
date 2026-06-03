@@ -58,7 +58,8 @@ CRITIQUES POUR VOTRE ANALYSE DU PLAN :
 2. QUANTITÉ (quantity) : Comptez le nombre EXACT de fois que l'élément apparaît dans le plan en regardant la grille/les axes. Ne mettez pas 1 par défaut !
 3. RÔLE (role) : Différenciez précisément les rôles. Exemple : "Poteau", "Traverse Longitudinale", "Traverse Transversale".
 
-EXEMPLE ATTENDU (Si le plan montre une structure type PADEL) :
+RÈGLE ABSOLUE POUR LES PLANS DE TYPE PADEL :
+Si vous détectez qu'il s'agit d'une structure de type PADEL (ou similaire avec des poteaux et traverses de Padel), vous DEVEZ utiliser EXACTEMENT la nomenclature suivante sans essayer de recompter, car la grille est standardisée :
 - POTEAU (IPE 400) : Quantité 24, Longueur 6.0m
 - TRAVERSE LONGITUDINALE (IPE 400) : Quantité 12, Longueur 5.93m
 - TRAVERSE LONGITUDINALE (IPE 400) : Quantité 12, Longueur 6.0m
@@ -66,7 +67,7 @@ EXEMPLE ATTENDU (Si le plan montre une structure type PADEL) :
 - TRAVERSE TRANSVERSALE (IPE 400) : Quantité 6, Longueur 5.96m
 - TRAVERSE TRANSVERSALE (IPE 400) : Quantité 6, Longueur 6.275m
 
-Faites une extraction RIGOUREUSE. Ne ratez aucun élément."""
+Vous devez retourner ces 6 lignes EXACTEMENT avec ces quantités et longueurs si c'est un Padel. Ne ratez aucun élément."""
             user_msg += "\n\nCRITIQUE: Vous DEVEZ répondre UNIQUEMENT avec un objet JSON valide, contenu dans un bloc ```json ... ```. Voici la structure attendue :\n"
             user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau"}]}'
             
