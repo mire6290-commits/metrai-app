@@ -59,6 +59,8 @@ CRITIQUES POUR VOTRE ANALYSE DU PLAN :
 3. RÔLE (role) : Déduisez si c'est un Poteau, Traverse, Sablière, Panne, etc.
 
 Ne ratez aucun élément."""
+            user_msg += "\n\nCRITIQUE: Vous DEVEZ répondre UNIQUEMENT avec un objet JSON valide, contenu dans un bloc ```json ... ```. Voici la structure attendue :\n"
+            user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau"}]}'
             
             payload = {
                 "contents": [
@@ -71,34 +73,10 @@ Ne ratez aucun élément."""
                 ],
                 "generationConfig": {
                     "temperature": 0.0,
-                    "maxOutputTokens": 8192,
-                    "responseMimeType": "application/json",
-                    "responseSchema": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "scale_detected": {"type": "STRING"},
-                            "profiles": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "id": {"type": "STRING"},
-                                        "type": {"type": "STRING"},
-                                        "designation": {"type": "STRING"},
-                                        "role": {"type": "STRING"},
-                                        "length_m": {"type": "NUMBER"},
-                                        "quantity": {"type": "INTEGER"},
-                                        "zone": {"type": "STRING"},
-                                        "confidence": {"type": "NUMBER"}
-                                    },
-                                    "required": ["designation"]
-                                }
-                            }
-                        }
-                    }
+                    "maxOutputTokens": 8192
                 },
                 "systemInstruction": {
-                    "parts": [{"text": SYSTEM_PROMPT}]
+                    "parts": [{"text": "You are a JSON extractor. Output ONLY valid JSON."}]
                 }
             }
             models_to_try = [
