@@ -59,8 +59,6 @@ class PDFLLMEngine:
             
             user_msg += "\n\nCRITICAL: DO NOT STOP EARLY. You must extract EVERY SINGLE profile listed in the table. Do not truncate the JSON list."
             
-            generate_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-            
             payload = {
                 "contents": [
                     {
@@ -80,9 +78,18 @@ class PDFLLMEngine:
                 }
             }
             
-            resp = requests.post(generate_url, json=payload, headers={"Content-Type": "application/json"}, timeout=180)
-            if not resp.ok:
-                raise RuntimeError(f"Gemini API failed: {resp.status_code} {resp.text}")
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+            resp = None
+            for model_name in models_to_try:
+                logger.info(f"Trying model {model_name}...")
+                generate_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                resp = requests.post(generate_url, json=payload, headers={"Content-Type": "application/json"}, timeout=180)
+                if resp.ok:
+                    break
+                logger.warning(f"Model {model_name} failed: {resp.status_code} {resp.text}")
+                
+            if not resp or not resp.ok:
+                raise RuntimeError(f"Gemini API failed on all models. Last error: {resp.status_code} {resp.text}")
                 
             data = resp.json()
             raw_json = data["candidates"][0]["content"]["parts"][0]["text"]
