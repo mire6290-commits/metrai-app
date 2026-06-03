@@ -40,6 +40,7 @@ class TextLLMEngine:
             user_msg += f"Ref: {context['ref']}\n"
         
         user_msg += f"\nData:\n{text_content}"
+        user_msg += "\n\nCRITICAL: DO NOT STOP EARLY. You must extract EVERY SINGLE profile listed in the text data. Do not truncate the JSON list. If there are 50 items, output 50 items."
 
         if self.provider == "claude":
             import anthropic
@@ -53,7 +54,7 @@ class TextLLMEngine:
             sys_prompt = SYSTEM_PROMPT + "\n\nYou must return ONLY a JSON object."
             response = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=4096,
+                max_tokens=8192,
                 temperature=0.0,
                 system=sys_prompt,
                 messages=[
@@ -136,6 +137,7 @@ class TextLLMEngine:
             "contents": [{"parts": [{"text": user_msg}]}],
             "generationConfig": {
                 "temperature": 0.0,
+                "maxOutputTokens": 8192,
                 "responseMimeType": "application/json"
             },
             "systemInstruction": {
