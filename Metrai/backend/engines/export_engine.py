@@ -127,6 +127,8 @@ class ExportEngine:
             if current_row - 1 > start_row:
                 ws.merge_cells(start_row=start_row, start_column=2, end_row=current_row-1, end_column=2)
 
+        last_data_row = current_row - 1
+
         # Totaux
         current_row += 1
         
@@ -134,8 +136,12 @@ class ExportEngine:
         ws.cell(row=current_row, column=2, value="BOULONNERIE + SOUDAGE").font = Font(bold=True)
         ws.cell(row=current_row, column=2).alignment = center_align
         ws.cell(row=current_row, column=3, value="5%").alignment = center_align
-        if current_row > 3:
-            ws.cell(row=current_row, column=8, value=round(total_sum_kg * 0.05, 2)).border = thin_border
+        
+        boulonnerie_cell_row = current_row
+        if last_data_row >= 2:
+            # Excel formula: 5% of the sum of column H
+            f_boul = f"=0.05*SUM(H2:H{last_data_row})"
+            ws.cell(row=current_row, column=8, value=f_boul).border = thin_border
         
         current_row += 1
         
@@ -144,8 +150,10 @@ class ExportEngine:
         total_cell.font = Font(bold=True, italic=True)
         total_cell.fill = PatternFill(start_color="8DB4E2", end_color="8DB4E2", fill_type="solid")
         
-        if current_row > 4:
-            final_sum_cell = ws.cell(row=current_row, column=8, value=round(total_sum_kg * 1.05, 2))
+        if last_data_row >= 2:
+            # Excel formula: sum of column H + Boulonnerie cell
+            f_final = f"=SUM(H2:H{last_data_row})+H{boulonnerie_cell_row}"
+            final_sum_cell = ws.cell(row=current_row, column=8, value=f_final)
             final_sum_cell.font = Font(bold=True)
             final_sum_cell.fill = PatternFill(start_color="FCD5B4", end_color="FCD5B4", fill_type="solid")
             final_sum_cell.border = thin_border
