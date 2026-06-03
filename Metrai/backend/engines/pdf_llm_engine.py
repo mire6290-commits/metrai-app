@@ -51,13 +51,14 @@ class PDFLLMEngine:
         try:
             # 2. Call generateContent with the URI
             logger.info(f"File uploaded to {file_uri}. Calling generateContent...")
-            user_msg = "Please extract the steel profiles from the nomenclature table in this PDF.\n\n"
-            if context.get("project"):
-                user_msg += f"Project: {context['project']}\n"
-            if context.get("ref"):
-                user_msg += f"Ref: {context['ref']}\n"
-            user_msg += "\n\nCRITICAL: DO NOT STOP EARLY. You must extract EVERY SINGLE profile listed in the table. Do not truncate the JSON list."
-            user_msg += "\nCRITICAL: Pay extreme attention to the 'quantity' (Nombre/Qté) and 'length_m' (Longueur en mètres). If they are present in the table, you MUST extract them."
+            user_msg = """Vous êtes un ingénieur expert en charpente métallique. Extrayez TOUS les profilés en acier de ce plan PDF.
+
+CRITIQUES POUR VOTRE ANALYSE DU PLAN :
+1. LONGUEUR (length_m) : Vous DEVEZ extraire la longueur exacte en lisant les lignes de cotations (dimensions) dessinées à côté des éléments dans le plan. ATTENTION : Les cotations sont souvent en millimètres (mm). Vous DEVEZ convertir la valeur en MÈTRES (m) (ex: 6000 mm -> 6.0 m).
+2. QUANTITÉ (quantity) : Vous DEVEZ compter le nombre de fois que l'élément (poteau, traverse, sablière, etc.) apparaît dans le plan ou chercher les mentions comme '4 x IPE400'. Les éléments de charpente sont souvent multiples !
+3. RÔLE (role) : Déduisez si c'est un Poteau, Traverse, Sablière, Panne, etc.
+
+Ne ratez aucun élément."""
             
             payload = {
                 "contents": [
