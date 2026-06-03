@@ -393,8 +393,16 @@ def _enrich_profile(p: Any) -> ProfileOut:
         d = float(d_match.group(1))
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
 
-    length_val = p.length_m if p.length_m is not None and p.length_m > 0 else 1.0
-    qty_val = p.quantity if getattr(p, 'quantity', None) and p.quantity > 0 else 1
+    try:
+        l_float = float(p.length_m) if p.length_m is not None else 0.0
+    except:
+        l_float = 0.0
+    length_val = l_float if l_float > 0 else 1.0
+    try:
+        q_int = int(p.quantity) if getattr(p, 'quantity', None) is not None else 0
+    except:
+        q_int = 0
+    qty_val = q_int if q_int > 0 else 1
 
     poids = None
     if masse is not None:
