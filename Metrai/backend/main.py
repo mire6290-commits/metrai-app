@@ -382,13 +382,17 @@ def _enrich_profile(p: Any) -> ProfileOut:
     designation = re.sub(r'^([A-Z]+)(\d+)', r'\1 \2', designation)
     
     masse = _RULES_DB.get(designation)
-    
     # Fallback to check if it's L A*A*T
     if not masse and designation.startswith('L '):
         masse = _RULES_DB.get(designation.replace(' ', ''))
+        if not masse:
+            # handle L 60*6
+            l_match = re.match(r'L\s*(\d+)\*(\d+)', designation)
+            if l_match:
+                masse = _RULES_DB.get(f"L {l_match.group(1)}*{l_match.group(1)}*{l_match.group(2)}")
 
     import math
-    d_match = re.match(r'D\s*(\d+)', designation)
+    d_match = re.search(r'(?:D|ROND.*?)\s*(\d+)', designation, re.IGNORECASE)
     if d_match and not masse:
         d = float(d_match.group(1))
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
@@ -408,8 +412,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
     if masse is not None:
         poids = round(masse * length_val * qty_val, 2)
         
-    # Check for PL A*B*C
-    pl_match = re.match(r'PL\s*(\d+)\*(\d+)\*(\d+)', designation)
+    # Check for PL or TN A*B*C
+    pl_match = re.match(r'(?:PL|TN)\s*(\d+)\*(\d+)\*(\d+)', designation)
     poids_unitaire = None
     if pl_match:
         a, b, c = map(float, pl_match.groups())
