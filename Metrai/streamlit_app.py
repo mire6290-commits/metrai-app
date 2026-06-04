@@ -98,6 +98,8 @@ if st.session_state.get("analyzed", False):
     
     # Bouton d'export Excel via l'API
     # On reconstruit les dictionnaires à partir du dataframe édité
+    import numpy as np
+    edited_df = edited_df.replace({np.nan: None})
     edited_profiles = edited_df.to_dict(orient="records")
     
     try:
