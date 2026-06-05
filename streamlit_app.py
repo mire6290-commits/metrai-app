@@ -5,6 +5,70 @@ import io
 
 st.set_page_config(page_title="Metrai AI - Charpente", page_icon="🏗️", layout="wide")
 
+# --- CUSTOM CSS (Template Wa7ch) ---
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Outfit', sans-serif;
+    }
+    
+    /* Hide default Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Metric Cards Glassmorphism */
+    div[data-testid="metric-container"] {
+        background-color: rgba(30, 33, 42, 0.6);
+        border: 1px solid rgba(255, 122, 0, 0.2);
+        padding: 15px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 122, 0, 0.8);
+    }
+
+    /* Subheaders & Labels */
+    h1, h2, h3, h4, h5, h6 {
+        color: #FAFAFA !important;
+        font-weight: 600;
+    }
+    
+    /* Upload Box Styling */
+    .stFileUploader > div > div {
+        background-color: rgba(30, 33, 42, 0.8) !important;
+        border: 2px dashed rgba(255, 122, 0, 0.5) !important;
+        border-radius: 12px !important;
+    }
+    .stFileUploader > div > div:hover {
+        border-color: #FF7A00 !important;
+    }
+    
+    /* Main Title Styling */
+    .title-text {
+        font-size: 3rem;
+        font-weight: 800;
+        background: -webkit-linear-gradient(45deg, #FF7A00, #FFAE00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    .subtitle-text {
+        font-size: 1.2rem;
+        color: #A0AEC0;
+        margin-bottom: 2.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+# -----------------------------------
+
 API_URL = "https://amira221-metrai-backend.hf.space"
 
 def reset_state():
@@ -15,8 +79,8 @@ def reset_state():
 if "analyzed" not in st.session_state:
     st.session_state.analyzed = False
 
-st.title("🏗️ Metrai AI - Métré Charpente Métallique")
-st.markdown("Uploadez votre plan PDF pour générer automatiquement la nomenclature complète.")
+st.markdown('<div class="title-text">🏗️ METRAI AI PRO</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle-text">Générateur intelligent de nomenclatures d\'exécution pour charpente métallique.</div>', unsafe_allow_html=True)
 
 # Layout: sidebar for inputs
 with st.sidebar:
