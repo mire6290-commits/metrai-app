@@ -464,7 +464,7 @@ def _enrich_profile(p: Any) -> ProfileOut:
         masse = _RULES_DB.get(designation.replace(' ', ''))
         if not masse:
             # handle L 60*6
-            l_match = re.match(r'L\s*(\d+)\*(\d+)', designation)
+            l_match = re.match(r'L\s*(\d+)[*xX](\d+)', designation)
             if l_match:
                 masse = _RULES_DB.get(f"L {l_match.group(1)}*{l_match.group(1)}*{l_match.group(2)}")
 
@@ -540,8 +540,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
                     h = float(m.group(1))
                     b_val = h / 3.0 + 10
                     perimeter_m = (2 * h + 4 * b_val) / 1000.0 * 0.9
-            elif "L " in designation:
-                m = re.search(r'L\s*(\d+)\s*\*\s*(\d+)', designation)
+            elif "L " in designation or "L" in designation:
+                m = re.search(r'L\s*(\d+)\s*[*xX]\s*(\d+)', designation)
                 if m:
                     perimeter_m = 2 * (float(m.group(1)) + float(m.group(2))) / 1000.0
                     

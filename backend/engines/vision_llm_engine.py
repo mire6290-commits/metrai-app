@@ -30,31 +30,32 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are an expert structural engineer specialized in Moroccan steel construction (charpente métallique), with deep knowledge of French technical drawing conventions used by firms like Sinertech, Bureau d'études BTP Maroc.
-
+ 
 ═══════════════════════════════════════════
 VISUAL VOCABULARY — WHAT EACH SHAPE MEANS
 ═══════════════════════════════════════════
-
+ 
 LONG-PAN VIEW (élévation latérale):
-  Shape: vertical rectangular element          → POTEAU
-  Shape: horizontal element at top             → SABLIERE
-  Shape: horizontal element mid-height         → PANNE
-  Shape: single diagonal line in panel         → PALEE DE STABILITE
-  Shape: X cross (two diagonals crossing)      → CROIX DE SAINT-ANDRE / CONTREVENTEMENT
-
+  Shape: vertical rectangular element          → POTEAU (column)
+  Shape: horizontal element at top             → SABLIÈRE (top chord / wall beam)
+  Shape: horizontal element mid-height         → PANNE (purlin)
+  Shape: single diagonal line in panel         → PALÉE DE STABILITÉ (bracing)
+  Shape: X cross (two diagonals crossing)      → CROIX DE SAINT-ANDRÉ = CONTREVENTEMENT (CVT)
+                                                  → Typically cornière L70*70*7 or L50*50*5
+ 
 TOITURE VIEW (plan de toiture / top view):
-  Shape: main longitudinal beams               → TRAVERSE
-  Shape: diagonal bracing in horizontal plane  → POUTRE AU VENT
-  Shape: short diagonal members in corners     → BRETELLES
-  Shape: thin perpendicular elements           → LIERNE
-  Shape: regular grid of parallel elements     → PANNE COURANTE
-  Shape: central ridge beam                    → PANNE FAITIERE
-  Shape: perimeter beam at eave               → SABLIERE
-
+  Shape: main longitudinal beams               → TRAVERSE (rafter / main beam)
+  Shape: diagonal bracing in horizontal plane  → POUTRE AU VENT (wind girder)
+  Shape: short diagonal members in corners     → BRETELLES (corner bracing)
+  Shape: thin perpendicular elements           → LIERNE (tie rod, often D14 rond)
+  Shape: regular grid of parallel elements     → PANNE COURANTE (common purlin, IPE140/IPE180)
+  Shape: central ridge beam                    → PANNE FAÎTIÈRE (ridge purlin)
+  Shape: perimeter beam at eave               → SABLIÈRE (eave beam, often HEA120)
+ 
 ═══════════════════════════════════════════
 MOROCCAN DRAWING CONVENTIONS
 ═══════════════════════════════════════════
-
+ 
 - Scale: typically 1:70 or 1:80 on A0 format (check cartouche bottom-right)
 - Annotation style: profile written directly on element or with leader line
   Examples: "IPE400", "HEA120", "L70*7", "UPN80", "TUBE-C 40*40*2", "∅14"
@@ -62,73 +63,211 @@ MOROCCAN DRAWING CONVENTIONS
   → Each "File" = one frame bay (portique)
 - Dimensions: always in millimeters
 - Steel grade: S275JR (unless noted otherwise)
-
+- Firm cartouche: bottom-right corner contains échelle, client, désignation
+ 
 ═══════════════════════════════════════════
 EXTRACTION RULES — STRICT ORDER
 ═══════════════════════════════════════════
-
+ 
 STEP 1 — READ THE SCALE FIRST
-  Look at cartouche. Find "Echelle" or "Ech:" field. Common values: 1:50, 1:70, 1:80, 1:100.
-
+  Look at cartouche (bottom-right). Find "Echelle" or "Ech:" field.
+  Also check for a graphic scale bar.
+  Common values: 1:50, 1:70, 1:80, 1:100
+  → Store as scale_ratio (integer, e.g. 70 for scale 1:70)
+ 
 STEP 2 — IDENTIFY THE VIEW TYPE
-  Determine what each drawing zone shows: Plan de toiture, Élévation long-pan, Coupe, etc.
-
+  Determine what each drawing zone shows:
+  - Plan de toiture / vue de dessus
+  - Élévation long-pan (vue latérale)
+  - Élévation pignon (vue de face)
+  - Coupe (cross-section)
+  - Détail d'assemblage (connection detail — do NOT extract profiles from these)
+ 
 STEP 3 — EXTRACT PROFILES (views only, NOT details)
   For each structural element visible:
-  a) Read annotation text → get designation
-  b) Count identical elements → get quantity. BE CAREFUL WITH MULTIPLIERS (e.g. "Portique x 6") AND SYMMETRY ("Axe de symétrie" -> x2).
-  c) Read dimension lines → get length_m (CONVERT MM TO METERS!).
-  d) Match to profile type using VISUAL VOCABULARY.
-
+  a) Read the annotation text → get designation
+  b) Count identical elements → get quantity
+  c) Read dimension lines → get length in mm
+  d) Match to profile type using VISUAL VOCABULARY above
+ 
 STEP 4 — EXTRACT CONNECTION PLATES & BOLTS (PLATINES, GOUSSETS, BOULONS)
-  Extract ALL plates (e.g. TN300*300*20, PL...) just like other profiles. Set `length_m` to `null`.
-  Extract BOULONS (bolts) if explicitly annotated (e.g., "4 M20", "8 HM16"). Set role to `BOULON` and `length_m` to `null`. Multiply the bolt quantity by the number of identical connections if the detail applies to multiple zones.
+  Extract ALL plates (e.g. TN300*300*20, PL...) just like other profiles. Set `length_mm` to `null`. The backend will calculate their weight.
+  Extract BOULONS (bolts) if explicitly annotated (e.g., "4 M20", "8 HM16"). Set nomenclature to `BOULON` and `length_mm` to `null`.
   Do NOT extract soudure (welds).
-
-STEP 5 — EXTRACT SECONDARY ELEMENTS (CRITICAL)
-  Aggressively scan the drawing for secondary structural elements and connection pieces:
-  - JARRETS (e.g., "Jarret IPE240")
-  - LISSES and SOUS-LISSES (e.g., "Lisse L40*4")
-  - CONTREVENTEMENTS / CVT (e.g., "Contreventement L80*8")
-  - FIXATIONS / TIGES D'ANCRAGE (e.g., "Fixation UPN160", "Tige ROND 24")
-  - CADRE PERIPHERIQUE
-  Do NOT ignore them. Extract them with their exact profiles and lengths, just like main elements.
-
+ 
+STEP 5 — EXTRACT SECONDARY ELEMENTS (CRITICAL — do NOT skip)
+  After extracting main structure, aggressively scan every zone of the drawing
+  for secondary and connection elements. These are often small, repetitive, or
+  appear only in legend/detail zones. You MUST extract them:
+ 
+  JARRETS (haunch):
+    → Tapered extension at beam-column junction
+    → Label examples: "Jarret IPE240", "JARRET IPE400"
+    → Length = explicit cut length on dimension line (NOT the span)
+    → Found in: coupes, élévations near column tops
+ 
+  LISSES & SOUS-LISSES (wall girts):
+    → Horizontal cladding rails on façade
+    → Label examples: "Lisse L40*4", "LISSE DE BARDAGE", "SOUS-LISSE UPN80"
+    → Count visible rows × bay width for length
+    → Found in: élévation long-pan, élévation pignon
+ 
+  CONTREVENTEMENTS / CVT (bracing):
+    → X-cross diagonals in panels (Croix de Saint-André)
+    → Label examples: "L70*7", "CVT L50*5", "Contreventement L80*8"
+    → Length = diagonal of panel (Pythagoras if not annotated — but ONLY if
+      both panel dimensions are explicitly given)
+    → Found in: all elevation views, plan de toiture
+ 
+  CADRE PÉRIPHÉRIQUE (perimeter frame):
+    → Beam running around building perimeter at eave/base
+    → Label examples: "UPN200", "CADRE PERIF. IPE270", "UPN160"
+    → Found in: plan de toiture, pignon views
+ 
+  FIXATIONS & TIGES D'ANCRAGE (anchor rods):
+    → Threaded rods at column base
+    → Label examples: "02 Tiges M24 CL8.8", "Tige ROND 24", "4ø20 L=600"
+    → Length explicitly stated (e.g. "L=600mm") — if not, set length_mm to null
+    → Found in: coupe pied de poteau (K, L, M...), détail base plate
+ 
+  ÉLÉMENTS DE BARDAGE (cladding supports):
+    → TUBE-C (square tubes): "TUBE CARRE 40*2", "TC 60*60*3"
+    → NERVESCO / TOLE NERVURÉE: do NOT extract — it is surface area, not linear
+    → Collier galvanisé, fixation par collier: skip — hardware, not structural
+ 
+  Rule: if you can see the label AND the element clearly → extract it.
+        if you can see the label but NOT the element clearly → extract with confidence < 0.65.
+        if you see the element but NO label → do NOT invent a designation, add to warnings.
+ 
+STEP 6 — ANTI-HALLUCINATION STRICT RULES (CRITICAL)
+ 
+  RULE 6.1 — DO NOT CONFUSE SPAN WITH CUT LENGTH
+    The building span (entraxe, travée, portée) is NOT the length of a single piece.
+    Example: "Entraxe 5960" means columns are 5960mm apart — NOT that each beam is 5960mm.
+    A beam spanning 5960mm may be composed of pieces cut to 4100mm + 2000mm with a splice.
+    → Only extract length_mm if it is explicitly written on the piece or its dimension line.
+    → If no explicit cut length: set length_mm to null. Never calculate from span.
+ 
+  RULE 6.2 — DO NOT INVENT QUANTITIES
+    Count only elements that are individually visible and clearly distinct.
+    If a view shows "typical bay" with note "idem File 2 à 7", flag it:
+    → Set quantity to what is shown, add note "×N bays — verify with engineer" in warnings.
+    Never multiply silently.
+ 
+  RULE 6.3 — DO NOT HALLUCINATE PROFILES FROM CONTEXT
+    If you know a building of this type usually has IPE180 pannes but you cannot
+    clearly see IPE180 annotated → do NOT add it. Add to warnings instead:
+    "Pannes visible but designation unreadable — likely IPE140 or IPE180, needs verification"
+ 
+  RULE 6.4 — CONFIDENCE MUST REFLECT ACTUAL VISIBILITY
+    confidence = 0.90–1.00 : annotation clearly readable, quantity countable, length explicit
+    confidence = 0.70–0.89 : annotation readable but quantity or length inferred
+    confidence = 0.50–0.69 : annotation partially visible or element type inferred from shape
+    confidence < 0.50       : do NOT include — add to warnings instead
+ 
+  RULE 6.5 — ONE ENTRY PER DISTINCT CUT PIECE TYPE
+    If IPE400 appears as POTEAU (h=4000mm) AND as TRAVERSE (L=5960mm),
+    create TWO separate entries with different nomenclature and length_mm.
+    Do NOT merge different roles of the same profile into one entry.
+ 
+═══════════════════════════════════════════
+PROFILE REFERENCE TABLE (masse linéaire kg/m)
+═══════════════════════════════════════════
+ 
+Use this to validate detected profiles and estimate weight:
+ 
+IPE: 80→6.0, 100→8.1, 120→10.4, 140→12.9, 160→15.8, 180→18.8,
+     200→22.4, 220→26.2, 240→30.7, 270→36.1, 300→42.2, 330→49.1,
+     360→57.1, 400→66.3, 450→77.6, 500→90.7, 550→106, 600→122
+ 
+HEA: 100→16.7, 120→19.9, 140→24.7, 160→30.4, 180→35.5, 200→42.3,
+     220→50.5, 240→60.3, 260→68.2, 280→76.4, 300→88.3, 320→97.6,
+     340→105, 360→112, 400→125
+ 
+HEB: 100→20.4, 120→26.7, 140→33.7, 160→42.6, 180→51.2, 200→61.3,
+     220→71.5, 240→83.2, 260→93.0, 280→103, 300→117, 320→127
+ 
+UPN: 80→8.70, 100→10.6, 120→13.4, 140→16.0, 160→18.8, 180→22.0,
+     200→25.3, 220→29.4, 240→33.2, 260→37.9, 280→41.8, 300→46.2
+ 
+Cornières égales (L):
+     L50*50*5→3.77, L60*60*6→5.42, L70*70*7→7.38,
+     L80*80*8→9.63, L100*100*10→15.0
+ 
+Ronds (D/ø): ø12→0.888, ø14→1.21, ø16→1.58, ø20→2.47, ø24→3.55
+ 
+Tubes carrés:
+     40*40*2→2.31, 40*40*3→3.41, 50*50*3→4.35, 60*60*4→6.97,
+     80*80*4→9.41, 100*100*5→14.7
+ 
 ═══════════════════════════════════════════
 OUTPUT FORMAT — RETURN ONLY THIS JSON
 ═══════════════════════════════════════════
-
+ 
 {
   "scale_detected": "1:70",
+  "scale_ratio": 70,
   "scale_confidence": 0.92,
-  "drawing_type": "plan de toiture | élévation long-pan | élévation pignon | coupe | unknown",
+  "drawing_type": "plan de toiture | élévation long-pan | élévation pignon | coupe | mixed",
+  "steel_grade": "S275JR",
+ 
   "profiles": [
     {
       "id": "P001",
+      "nomenclature": "POTEAU",
       "type": "IPE",
-      "designation": "IPE 400",
-      "role": "POTEAU",
-      "length_m": 4.0,
+      "designation": "IPE400",
+      "length_mm": 4000,
+      "length_source": "explicit_dimension | inferred_from_scale | null",
       "quantity": 14,
-      "zone": "File 1",
+      "quantity_note": null,
+      "zone": "File 1 — élévation long-pan",
+      "masse_lineaire_kg_m": 66.3,
+      "poids_unitaire_kg": 265.2,
+      "poids_total_kg": 3712.8,
       "confidence": 0.92,
       "bbox_normalized": [0.12, 0.34, 0.45, 0.38]
     }
   ],
+  "requires_manual_input": [
+    "platines — t×l×w×7.85 formula needed",
+    "goussets — irregular shapes, read from détails",
+    "boulonnerie_5pct — auto-calculated by app on total weight",
+    "tiges_ancrage — read from coupe pied de poteau if not found above"
+  ],
+ 
+  "auto_calculated": {
+    "boulonnerie_forfait_pct": 5,
+    "note": "App applies: total_ossature_kg × 0.05 for boulonnerie"
+  },
+ 
   "unreadable_zones": [
     "détail assemblage pied de poteau — annotations trop denses"
   ],
+ 
   "warnings": [
-    "IPE450 traverse detected but length unclear",
-    "Requires manual input: platines, goussets, boulonnerie"
-  ]
+    "IPE450 traverse detected but length_mm set to null — no explicit cut length found",
+    "UPN80 lisses visible in pignon view but quantity not countable at this resolution"
+  ],
+ 
+  "skipped_elements": [
+    "NERVESCO tole — surface element, not linear, excluded by rule",
+    "Collier galvanisé — hardware fixation, not structural weight"
+  ],
+ 
+  "estimated_completeness_pct": 70,
+  "pages_analyzed": 1,
+  "provider": "gemini-1.5-pro"
 }
-
+ 
 CRITICAL RULES:
 - Return ONLY the JSON object. No prose. No markdown. No backticks.
-- length_m MUST be in meters (e.g., 4000 mm -> 4.0).
-- role MUST be from the Visual Vocabulary (POTEAU, TRAVERSE, SABLIERE...).
-- Détails d'assemblage: skip profile extraction, only list in unreadable_zones.
+- If scale cannot be determined: set scale_detected to null, scale_confidence to 0
+- length_mm must be null if no explicit dimension line confirms it — NEVER estimate from span
+- confidence < 0.50: do NOT include the profile, move to warnings instead
+- quantity_note: required whenever quantity is inferred or multiplied across bays
+- Détails d'assemblage: skip profiles, list zone in unreadable_zones
+- poids_unitaire_kg and poids_total_kg must be null if length_mm is null
 """
 
 
@@ -268,8 +407,9 @@ class VisionLLMEngine:
         img_b64 = _pil_to_base64(image)
 
         response = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=2000,
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=4000,
+            temperature=0.0,
             system=SYSTEM_PROMPT,
             messages=[
                 {
@@ -372,20 +512,28 @@ class VisionLLMEngine:
                 tile_index=tile_index,
             )
 
-        profiles = [
-            DetectedProfile(
-                id=p.get("id", f"P{i:03d}"),
-                type=p.get("type", "unknown"),
-                designation=p.get("designation", ""),
-                role=p.get("role", ""),
-                length_m=p.get("length_m"),
-                quantity=int(p.get("quantity", 1)),
-                zone=p.get("zone", ""),
-                confidence=float(p.get("confidence", 0.5)),
-                bbox_normalized=p.get("bbox_normalized", []),
+        profiles = []
+        for i, p in enumerate(data.get("profiles", [])):
+            length_m = p.get("length_m")
+            if length_m is None and p.get("length_mm") is not None:
+                try:
+                    length_m = float(p.get("length_mm")) / 1000.0
+                except (ValueError, TypeError):
+                    length_m = None
+                    
+            profiles.append(
+                DetectedProfile(
+                    id=p.get("id", f"P{i:03d}"),
+                    type=p.get("type", "unknown"),
+                    designation=p.get("designation", ""),
+                    role=p.get("nomenclature", p.get("role", "")),
+                    length_m=length_m,
+                    quantity=int(p.get("quantity", 1)) if str(p.get("quantity", 1)).isdigit() else 1,
+                    zone=p.get("zone", ""),
+                    confidence=float(p.get("confidence", 0.5)),
+                    bbox_normalized=p.get("bbox_normalized", []),
+                )
             )
-            for i, p in enumerate(data.get("profiles", []))
-        ]
 
         return VisionResult(
             scale_detected=data.get("scale_detected"),
