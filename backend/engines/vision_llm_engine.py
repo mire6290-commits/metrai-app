@@ -85,6 +85,15 @@ STEP 4 — EXTRACT CONNECTION PLATES & BOLTS (PLATINES, GOUSSETS, BOULONS)
   Extract BOULONS (bolts) if explicitly annotated (e.g., "4 M20", "8 HM16"). Set role to `BOULON` and `length_m` to `null`. Multiply the bolt quantity by the number of identical connections if the detail applies to multiple zones.
   Do NOT extract soudure (welds).
 
+STEP 5 — EXTRACT SECONDARY ELEMENTS (CRITICAL)
+  Aggressively scan the drawing for secondary structural elements and connection pieces:
+  - JARRETS (e.g., "Jarret IPE240")
+  - LISSES and SOUS-LISSES (e.g., "Lisse L40*4")
+  - CONTREVENTEMENTS / CVT (e.g., "Contreventement L80*8")
+  - FIXATIONS / TIGES D'ANCRAGE (e.g., "Fixation UPN160", "Tige ROND 24")
+  - CADRE PERIPHERIQUE
+  Do NOT ignore them. Extract them with their exact profiles and lengths, just like main elements.
+
 ═══════════════════════════════════════════
 OUTPUT FORMAT — RETURN ONLY THIS JSON
 ═══════════════════════════════════════════
