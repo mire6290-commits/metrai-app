@@ -166,12 +166,28 @@ async def extract(
 
         all_results: list[VisionResult] = []
 
-        from engines.pdf_llm_engine import PDFLLMEngine
-        _pdf_engine = PDFLLMEngine()
+        # High-Res Tiling Architecture
+        logger.info("Using VisionLLMEngine with High-Res Tiling.")
+        _parser.dpi = 300 # Force high resolution for maximum precision
+        page_images = _parser.render_pages(str(tmp_path))
+        if pages != "all":
+            requested = {int(p.strip()) for p in pages.split(",")}
+            page_images = [p for p in page_images if p.page_number in requested]
 
-        logger.info("Using Universal NATIVE PDF AI routing for the entire document.")
-        result = _pdf_engine.analyze(str(tmp_path), context=context)
-        all_results.append(result)
+        for page_img in page_images:
+            if _parser.should_tile(page_img):
+                tiles = _parser.tile_page(page_img)
+                logger.info(f"Page {page_img.page_number} is large. Tiling into {len(tiles)} pieces.")
+                tile_results = []
+                for tile in tiles:
+                    res = _vision.analyze(tile.image, page_number=tile.page_number, tile_index=tile.tile_index, context=context)
+                    tile_results.append(res)
+                merged = merge_tile_results(tile_results)
+                all_results.append(merged)
+            else:
+                logger.info(f"Processing page {page_img.page_number} as single image")
+                res = _vision.analyze(page_img.image, page_number=page_img.page_number, context=context)
+                all_results.append(res)
 
         if not all_results:
             raise HTTPException(status_code=422, detail="No profiles extracted — check PDF and API keys")
@@ -247,19 +263,33 @@ async def extract_async(
                 tmp_path = Path(tmp.name)
             
             try:
-                from engines.pdf_llm_engine import PDFLLMEngine
-                _pdf_engine = PDFLLMEngine()
-
                 context = {
                     'project': project,
                     'ref': filename,
                     'scale_hint': scale_hint or 'unknown',
                 }
 
-                logger.info("Using Universal NATIVE PDF AI routing for the entire document.")
-                result = _pdf_engine.analyze(str(tmp_path), context=context)
-                
-                all_results = [result]
+                logger.info("Using VisionLLMEngine with High-Res Tiling (Async).")
+                _parser.dpi = 300
+                page_images = _parser.render_pages(str(tmp_path))
+                if pages != "all":
+                    requested = {int(p.strip()) for p in pages.split(",")}
+                    page_images = [p for p in page_images if p.page_number in requested]
+
+                all_results = []
+                for page_img in page_images:
+                    if _parser.should_tile(page_img):
+                        tiles = _parser.tile_page(page_img)
+                        logger.info(f"Page {page_img.page_number} tiled into {len(tiles)} pieces.")
+                        tile_results = []
+                        for tile in tiles:
+                            res = _vision.analyze(tile.image, page_number=tile.page_number, tile_index=tile.tile_index, context=context)
+                            tile_results.append(res)
+                        merged = merge_tile_results(tile_results)
+                        all_results.append(merged)
+                    else:
+                        res = _vision.analyze(page_img.image, page_number=page_img.page_number, context=context)
+                        all_results.append(res)
 
                 if not all_results:
                     TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
@@ -385,15 +415,35 @@ _RULES_DB: dict[str, float] = {
     "UPE 240": 30.20, "UPE 270": 35.20, "UPE 300": 44.40, "UPE 330": 53.20,
     "UPE 360": 61.20, "UPE 400": 72.20,
 
-    # COR / L (Ailes égales)
-    "L 20*20*3": 0.88, "L 25*25*3": 1.11, "L 30*30*3": 1.36, "L 30*30*4": 1.78,
-    "L 35*35*3.5": 1.85, "L 40*40*4": 2.42, "L 40*40*5": 2.97, "L 45*45*4.5": 3.04,
-    "L 50*50*5": 3.77, "L 50*50*6": 4.47, "L 60*60*5": 4.57, "L 60*60*6": 5.42,
-    "L 60*60*8": 7.09, "L 70*70*7": 7.38, "L 80*80*8": 9.66, "L 80*80*10": 11.90,
-    "L 90*90*9": 12.20, "L 100*100*8": 12.20, "L 100*100*10": 15.10, "L 100*100*12": 17.80,
-    "L 120*120*10": 18.20, "L 120*120*12": 21.60, "L 130*130*12": 23.60, 
-    "L 150*150*15": 33.80, "L 160*160*16": 38.30, "L 180*180*18": 48.60, 
-    "L 200*200*20": 59.90,
+    # COR / L (Les Angles/Cornières avec TOUTES les épaisseurs du Mémotech)
+    "L 20*20*3": 0.88,
+    "L 25*25*3": 1.12, "L 25*25*4": 1.46, "L 25*25*5": 1.79,
+    "L 30*30*3": 1.36, "L 30*30*3.5": 1.57, "L 30*30*4": 1.78, "L 30*30*5": 2.18,
+    "L 35*35*3.5": 1.84, "L 35*35*4": 2.09, "L 35*35*5": 2.57,
+    "L 40*40*3": 1.83, "L 40*40*4": 2.42, "L 40*40*5": 2.97, "L 40*40*6": 3.52,
+    "L 45*45*3": 2.07, "L 45*45*4": 2.72, "L 45*45*4.5": 3.06, "L 45*45*5": 3.38, "L 45*45*6": 4.00,
+    "L 50*50*3": 2.31, "L 50*50*4": 3.04, "L 50*50*5": 3.77, "L 50*50*6": 4.47, "L 50*50*7": 5.15, "L 50*50*8": 5.82,
+    "L 55*55*6": 4.94,
+    
+    # Reste des cornières (les grandes tailles et toutes leurs épaisseurs)
+    "L 60*60*4": 3.66, "L 60*60*5": 4.54, "L 60*60*6": 5.42, "L 60*60*7": 6.26, "L 60*60*8": 7.09, "L 60*60*10": 8.76,
+    "L 65*65*5": 4.95, "L 65*65*6": 5.89, "L 65*65*7": 6.81, "L 65*65*8": 7.72, "L 65*65*9": 8.62,
+    "L 70*70*5": 5.33, "L 70*70*6": 6.38, "L 70*70*7": 7.38, "L 70*70*9": 9.32,
+    "L 75*75*5": 5.72, "L 75*75*6": 6.85, "L 75*75*7": 7.93, "L 75*75*8": 8.99, "L 75*75*10": 11.07,
+    "L 80*80*5": 6.11, "L 80*80*5.5": 6.75, "L 80*80*6": 7.34, "L 80*80*6.5": 7.92, "L 80*80*8": 9.63, "L 80*80*10": 11.86,
+    "L 90*90*6": 8.30, "L 90*90*7": 9.61, "L 90*90*8": 10.90, "L 90*90*9": 12.18, "L 90*90*10": 13.45, "L 90*90*11": 14.70, "L 90*90*12": 15.93,
+    "L 100*100*10": 15.10, "L 120*120*12": 21.60, "L 150*150*15": 33.80, "L 200*200*20": 59.90,
+
+    # CORNIÈRES À AILES INÉGALES
+    "L 80*40*6": 5.40, "L 80*40*8": 7.09, "L 80*60*7": 7.36, "L 80*60*8": 8.34, 
+    "L 80*65*6": 6.58, "L 80*65*8": 8.66, "L 80*65*10": 10.68,
+    "L 90*65*6": 7.05, "L 90*65*8": 9.29, "L 90*70*8": 9.60,
+    "L 100*50*6": 6.81, "L 100*50*8": 8.97, "L 100*50*10": 11.07,
+    "L 120*80*8": 12.16, "L 120*80*10": 15.02,
+    "L 130*65*8": 11.85, "L 130*65*10": 14.62,
+    "L 150*90*10": 18.18, "L 150*90*11": 18.90, "L 150*100*10": 18.98, "L 150*100*12": 22.56,
+    "L 160*80*10": 18.20, "L 160*80*12": 21.62,
+    "L 200*100*10": 22.95, "L 200*100*12": 27.32, "L 200*100*14": 31.62,
 }
 
 
@@ -421,6 +471,21 @@ def _enrich_profile(p: Any) -> ProfileOut:
     if d_match and not masse:
         d = float(d_match.group(1))
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
+
+    # TUBES Ronds et Carrés/Rectangulaires
+    tube_match = re.search(r'TUBE\s*(?:C\s*|R\s*|O\s*|Ø\s*)?(\d+(?:\.\d+)?)\s*(?:[x*])\s*(\d+(?:\.\d+)?)(?:\s*(?:[x*])\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
+    if tube_match and not masse:
+        val1 = float(tube_match.group(1))
+        val2 = float(tube_match.group(2))
+        val3 = tube_match.group(3)
+        if val3:
+            # Tube Rect / Carré: A x B x E
+            a, b, e = val1, val2, float(val3)
+            masse = round((a + b - 2*e) * e * 0.0157, 2)
+        else:
+            # Tube Rond: Dia x E
+            d, e = val1, val2
+            masse = round((d - e) * e * 0.02466, 2)
 
     try:
         l_float = float(p.length_m) if p.length_m is not None else 0.0

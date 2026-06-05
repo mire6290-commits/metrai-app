@@ -102,36 +102,37 @@ class PDFLLMEngine:
         try:
             # 2. Call generateContent with the URI
             logger.info(f"File uploaded to {file_uri}. Calling generateContent...")
-            user_msg = """Vous êtes un ingénieur expert en charpente métallique. Extrayez TOUS les profilés en acier de ce plan PDF (poteaux, traverses, sablières, pannes...).
+            user_msg = """Vous êtes un ingénieur expert en charpente métallique. Extrayez TOUS les profilés en acier de ce plan PDF.
 
 CRITIQUES POUR VOTRE ANALYSE DU PLAN :
-1. LONGUEUR (length_m) : Lisez les lignes de cotations (dimensions) dans le plan. Convertissez les millimètres en mètres (ex: 6000 mm -> 6.0 m, 5930 mm -> 5.93 m).
-2. QUANTITÉ (quantity) : Comptez le nombre EXACT de fois que l'élément apparaît dans le plan en regardant la grille/les axes. Ne mettez pas 1 par défaut !
-3. RÔLE (role) : Différenciez précisément les rôles. Exemple : "Poteau", "Traverse Longitudinale", "Traverse Transversale".
+1. LONGUEUR (length_m) : Lisez les lignes de cotations dans le plan. Convertissez TOUJOURS les millimètres en mètres (ex: 6000 mm -> 6.0 m).
+2. QUANTITÉ (quantity) et REPÈRE : NE CONFONDEZ PAS LE "REPÈRE" (nom de l'assemblage) ET LA "QUANTITÉ" (nombre de pièces). 
+   - Exemple: "P1 4 IPE 200" -> P1 est le repère, la quantité est 4. 
+   - Exemple: "10 2 IPE 200" -> 10 est le repère, la quantité est 2.
+3. RÔLE (role) et ZONE (zone) : Utilisez le dictionnaire fourni pour catégoriser chaque élément.
+4. IGNORER LE ZWAQ : Ignorez les cartouches, les notes générales, et tout ce qui n'est pas un profilé en acier de l'ossature.
 
-VOTRE MISSION GLOBALE :
-Il ne s'agit pas seulement d'un plan Padel, mais de N'IMPORTE QUEL plan de Charpente Métallique. Vous devez extraire EXHAUSTIVEMENT la nomenclature complète de l'ossature métallique.
-
-ÉLÉMENTS À RECHERCHER (Liste exhaustive basée sur les standards de Charpente Métallique et les cours de l'OFPPT - TSBECM) :
-1. Poteaux, Potelets, Traverses (Transversales, Longitudinales).
-2. Assemblages, Jarrets, Goussets, Platines, Raidisseurs, Tiges d'ancrage, Bêches.
-3. Sablières, Poutres de compression, Pannes, Lisses, Sous-lisses.
-4. Contreventements (CVT), Liernes, Bracons, Bretelles, Tirants.
-5. Éléments de Cadre Périphérique, Supports divers, Montants.
+=== DICTIONNAIRE DU VOCABULAIRE STRUCTUREL ===
+Référez-vous EXCLUSIVEMENT à ces termes pour remplir 'role' et 'zone' :
+- ZONES BATIMENT : Pignon, Long-pan, Toiture, Versant, Croupe
+- PORTIQUE : Poteau, Potelet, Traverse, Jarret, Faîtage, Pied de poteau
+- TOITURE : Panne faîtière, Panne sablière, Panne courante, Lierne, Bretelle, Poutre au vent
+- FERME TREILLIS : Entrait, Arbalétrier, Montant, Diagonale, Poinçon
+- BARDAGE LONG-PAN : Lisse, Palée de stabilité, Croix de Saint-André
+=============================================
 
 Pour chaque élément repéré :
-- 'role': Le rôle structurel (ex: POTEAU, PANNE, LIERNE, CONTREVENTEMENT, CADRE PERIPHERIQUE, GOUSSET, PLATINE).
-- 'designation': La section exacte lue sur le plan (ex: IPE400, HEA120, L70*70*7, UPN80, D14, TUBE-C-40*40*2, PL 300x300x20).
-- 'quantity': Le nombre de fois que cet élément apparaît. Cherchez les multiplicateurs (ex: '4x', '14 UPN', '256 MONTANT', etc.) ou déduisez-le du nombre de travées/portiques.
-- 'length_m': La longueur de la pièce en mètres (convertissez les millimètres).
-
-Vous êtes un expert métier. Ne ratez aucun détail. Parcourez chaque vue, chaque coupe, et chaque détail (Détail A, Coupe E-E, etc.).
+- 'role': Le rôle structurel issu du dictionnaire ci-dessus (ex: Arbalétrier, Panne faîtière, Lierne...).
+- 'zone': La zone globale (ex: TOITURE, PIGNON, LONG-PAN, PORTIQUE). Si inconnue, laissez vide.
+- 'designation': La section exacte (ex: IPE400, HEA120, L70*70*7, L80*40*6, UPN80, TUBE-C-40*40*2, PL 300x300x20).
+- 'quantity': Le nombre de fois que cet élément apparaît. Cherchez les multiplicateurs (ex: '4x') ou déduisez-le du plan.
+- 'length_m': La longueur de la pièce en mètres.
 
 INSTRUCTION CRITIQUE ANTI-PARESSE (ANTI-LAZINESS) :
 Il est strictement INTERDIT de résumer, de tronquer, ou d'omettre des éléments. 
-Vous DEVEZ extraire la totalité des éléments de la nomenclature, même s'il y en a plus de 100 ou 200. Ne vous arrêtez pas au milieu. La vie humaine dépend de la précision absolue de ce métré. Parcourez la nomenclature ligne par ligne et convertissez CHAQUE ligne en objet JSON."""
+Vous DEVEZ extraire la totalité des éléments de la nomenclature, même s'il y en a plus de 100. Ne vous arrêtez pas au milieu. La vie humaine dépend de la précision absolue de ce métré."""
             user_msg += "\n\nCRITIQUE: Vous DEVEZ répondre UNIQUEMENT avec un objet JSON valide, contenu dans un bloc ```json ... ```. Voici la structure attendue :\n"
-            user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau"}]}'
+            user_msg += '{"profiles": [{"designation": "IPE 400", "length_m": 6.0, "quantity": 4, "role": "Poteau", "zone": "PORTIQUE"}]}'
             
             payload = {
                 "contents": [

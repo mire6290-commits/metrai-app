@@ -54,8 +54,8 @@ class PDFParser:
     """
 
     DEFAULT_DPI = 200
-    TILE_SIZE = 1024
-    TILE_OVERLAP = 128
+    TILE_SIZE = 2048
+    TILE_OVERLAP = 256
 
     def __init__(self, dpi: int = DEFAULT_DPI):
         self.dpi = dpi
@@ -140,10 +140,9 @@ class PDFParser:
     def should_tile(self, page_image: PageImage) -> bool:
         """
         Determine if an image is too large and should be split into overlapping tiles.
-        For current Gemini models, sending the whole image is preferred to avoid 
-        Quota Limits (5 RPM), as the model can handle large resolutions natively.
+        Enabled for High-Resolution structural drawing processing.
         """
-        return False
+        return page_image.width_px > self.TILE_SIZE or page_image.height_px > self.TILE_SIZE
 
     # ------------------------------------------------------------------
     # Internal helpers
