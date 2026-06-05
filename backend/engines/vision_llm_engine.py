@@ -80,9 +80,10 @@ STEP 3 — EXTRACT PROFILES (views only, NOT details)
   c) Read dimension lines → get length_m (CONVERT MM TO METERS!).
   d) Match to profile type using VISUAL VOCABULARY.
 
-STEP 4 — EXTRACT CONNECTION PLATES (PLATINES, GOUSSETS, RAIDISSEURS)
-  Extract ALL plates (e.g. TN300*300*20, PL...) just like other profiles. Add them to the `profiles` list with their exact designation and quantity. Set `length_m` to `null` since plates don't have linear length.
-  Do NOT extract Boulons (bolts) or soudure.
+STEP 4 — EXTRACT CONNECTION PLATES & BOLTS (PLATINES, GOUSSETS, BOULONS)
+  Extract ALL plates (e.g. TN300*300*20, PL...) just like other profiles. Set `length_m` to `null`.
+  Extract BOULONS (bolts) if explicitly annotated (e.g., "4 M20", "8 HM16"). Set role to `BOULON` and `length_m` to `null`. Multiply the bolt quantity by the number of identical connections if the detail applies to multiple zones.
+  Do NOT extract soudure (welds).
 
 ═══════════════════════════════════════════
 OUTPUT FORMAT — RETURN ONLY THIS JSON

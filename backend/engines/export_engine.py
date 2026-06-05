@@ -51,7 +51,7 @@ class ExportEngine:
         
         headers = [
             "Pos", "Nomenclatures", "Quantité", "Designation", 
-            "Long (mm)", "Poids Kg/(m)", "Poids Kg/Unt", "Poids Tot Kg"
+            "Long (mm)", "Poids Kg/(m)", "Poids Kg/Unt", "Poids Tot Kg", "S. Peinture (m²)"
         ]
         
         for col_num, header in enumerate(headers, 1):
@@ -137,6 +137,12 @@ class ExportEngine:
                 c_ptot.alignment = center_align
                 c_ptot.border = thin_border
                 
+                # Surface Peinture
+                val_surf = item.get('surface_peinture_m2')
+                c_surf = ws.cell(row=current_row, column=9, value=val_surf if val_surf is not None else "----")
+                c_surf.alignment = center_align
+                c_surf.border = thin_border
+                
                 current_row += 1
                 pos += 1
                 
@@ -148,12 +154,19 @@ class ExportEngine:
         # Totaux
         current_row += 1
         
-        # Boulonnerie + Soudage 5%
-        ws.cell(row=current_row, column=2, value="BOULONNERIE + SOUDAGE").font = Font(bold=True)
-        ws.cell(row=current_row, column=2).alignment = center_align
-        ws.cell(row=current_row, column=3, value="5%").alignment = center_align
+        has_bolts = any("BOULON" in str(i.get('role', '')).upper() or "BOULON" in str(i.get('designation', '')).upper() for i in data)
+
+        if has_bolts:
+            ws.cell(row=current_row, column=2, value="SOUDAGE (2%)").font = Font(bold=True)
+            ws.cell(row=current_row, column=2).alignment = center_align
+            ws.cell(row=current_row, column=3, value="2%").alignment = center_align
+            boulonnerie_val = total_sum_kg * 0.02
+        else:
+            ws.cell(row=current_row, column=2, value="BOULONNERIE + SOUDAGE").font = Font(bold=True)
+            ws.cell(row=current_row, column=2).alignment = center_align
+            ws.cell(row=current_row, column=3, value="5%").alignment = center_align
+            boulonnerie_val = total_sum_kg * 0.05
         
-        boulonnerie_val = total_sum_kg * 0.05
         c_boul = ws.cell(row=current_row, column=8, value=round(boulonnerie_val, 3))
         c_boul.border = thin_border
         c_boul.alignment = center_align
@@ -174,7 +187,7 @@ class ExportEngine:
         final_sum_cell.alignment = center_align
 
         # Ajustement des largeurs
-        col_widths = {'A': 5, 'B': 30, 'C': 10, 'D': 25, 'E': 15, 'F': 15, 'G': 20, 'H': 20}
+        col_widths = {'A': 5, 'B': 30, 'C': 10, 'D': 25, 'E': 15, 'F': 15, 'G': 20, 'H': 20, 'I': 20}
         for col, width in col_widths.items():
             ws.column_dimensions[col].width = width
 

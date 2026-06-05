@@ -65,11 +65,17 @@ if st.session_state.get("analyzed", False):
     if not total_poids and "poids_total_kg" in df.columns:
         total_poids = pd.to_numeric(df["poids_total_kg"], errors='coerce').sum()
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("⚖️ Poids Total Estimé", f"{total_poids:,.2f} kg".replace(',', ' '))
-    col2.metric("📦 Éléments Extraits", f"{len(df)} profilés")
-    col3.metric("📝 Type de Plan", data.get("drawing_type", "Inconnu").capitalize())
-    col4.metric("📄 Pages Analysées", data.get("pages_processed", 1))
+    # Calculate Total Peinture
+    total_peinture = 0.0
+    if "surface_peinture_m2" in df.columns:
+        total_peinture = pd.to_numeric(df["surface_peinture_m2"], errors='coerce').sum()
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("⚖️ Poids Total", f"{total_poids:,.2f} kg".replace(',', ' '))
+    col2.metric("🎨 Surface Peinture", f"{total_peinture:,.2f} m²".replace(',', ' '))
+    col3.metric("📦 Éléments", f"{len(df)} profilés")
+    col4.metric("📝 Plan", data.get("drawing_type", "Inconnu").capitalize())
+    col5.metric("📄 Pages", data.get("pages_processed", 1))
     
     warnings = data.get("warnings", [])
     if warnings:

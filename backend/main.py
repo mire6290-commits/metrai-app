@@ -98,6 +98,7 @@ class ProfileOut(BaseModel):
     masse_lineaire_kg_m: float | None = None
     poids_unitaire: Optional[float] = None
     poids_total_kg: float | None = None
+    surface_peinture_m2: float | None = None
 
 
 class ExtractionResponse(BaseModel):
@@ -475,6 +476,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
 
     # TUBES Ronds et Carrés/Rectangulaires
     tube_match = re.search(r'TUBE[ \-]*(?:C|R|O|Ø)?[ \-]*(\d+(?:\.\d+)?)\s*[xX*]\s*(\d+(?:\.\d+)?)(?:\s*[xX*]\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
+    perimeter_m = None  # Pour la peinture
+    
     if tube_match and not masse:
         val1 = float(tube_match.group(1))
         val2 = float(tube_match.group(2))
@@ -483,10 +486,12 @@ def _enrich_profile(p: Any) -> ProfileOut:
             # Tube Rect / Carré: A x B x E
             a, b, e = val1, val2, float(val3)
             masse = round((a + b - 2*e) * e * 0.0157, 2)
+            perimeter_m = 2 * (a + b) / 1000.0
         else:
             # Tube Rond: Dia x E
             d, e = val1, val2
             masse = round((d - e) * e * 0.02466, 2)
+            perimeter_m = (math.pi * d) / 1000.0
 
     try:
         l_float = float(p.length_m) if p.length_m is not None else 0.0
@@ -506,11 +511,42 @@ def _enrich_profile(p: Any) -> ProfileOut:
     # Check for PL or TN A*B*C
     pl_match = re.search(r'(?:PL|TN)\s*(\d+)\s*\*?\s*(\d+)\s*\*?\s*(\d+)', designation)
     poids_unitaire = None
+    surface_peinture = None
+    
     if pl_match:
         a, b, c = map(float, pl_match.groups())
         # Volume en m3 * 8000 kg/m3 (Densité métier charpente)
         poids_unitaire = round((a * b * c / 1e9) * 8000, 3)
         poids = round(poids_unitaire * qty_val, 2)
+        # Peinture pour les platines (les 2 faces principales)
+        surface_peinture = round(2 * (a * b) / 1000000.0 * qty_val, 2)
+    else:
+        # Calcul de la surface de peinture pour les profilés (formules approchées Mémotech)
+        if not perimeter_m:
+            if "IPE" in designation:
+                m = re.search(r'IPE\s*(\d+)', designation)
+                if m:
+                    h = float(m.group(1))
+                    perimeter_m = (4 * h) / 1000.0 * 0.95
+            elif "HE" in designation:
+                m = re.search(r'HE[ABM]\s*(\d+)', designation)
+                if m:
+                    h = float(m.group(1))
+                    b_val = min(h, 300.0)
+                    perimeter_m = (2 * h + 4 * b_val) / 1000.0 * 0.95
+            elif "UPN" in designation or "UPE" in designation:
+                m = re.search(r'UP[NE]\s*(\d+)', designation)
+                if m:
+                    h = float(m.group(1))
+                    b_val = h / 3.0 + 10
+                    perimeter_m = (2 * h + 4 * b_val) / 1000.0 * 0.9
+            elif "L " in designation:
+                m = re.search(r'L\s*(\d+)\s*\*\s*(\d+)', designation)
+                if m:
+                    perimeter_m = 2 * (float(m.group(1)) + float(m.group(2))) / 1000.0
+                    
+        if perimeter_m and length_val > 0:
+            surface_peinture = round(perimeter_m * length_val * qty_val, 2)
 
     out = ProfileOut(
         id=p.id,
@@ -524,5 +560,6 @@ def _enrich_profile(p: Any) -> ProfileOut:
         masse_lineaire_kg_m=masse,
         poids_unitaire=poids_unitaire,
         poids_total_kg=poids,
+        surface_peinture_m2=surface_peinture,
     )
     return out
