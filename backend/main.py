@@ -452,6 +452,7 @@ import re
 def _enrich_profile(p: Any) -> ProfileOut:
     """Look up masse linéaire and compute poids total from RulesDB."""
     designation = p.designation.upper().strip()
+    designation = designation.replace("CORNIÈRE", "").replace("CORNIERE", "").strip()
     
     # Format "IPE400" to "IPE 400" to match RulesDB
     designation = re.sub(r'^([A-Z]+)(\d+)', r'\1 \2', designation)
@@ -473,7 +474,7 @@ def _enrich_profile(p: Any) -> ProfileOut:
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
 
     # TUBES Ronds et Carrés/Rectangulaires
-    tube_match = re.search(r'TUBE\s*(?:C\s*|R\s*|O\s*|Ø\s*)?(\d+(?:\.\d+)?)\s*(?:[x*])\s*(\d+(?:\.\d+)?)(?:\s*(?:[x*])\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
+    tube_match = re.search(r'TUBE[ \-]*(?:C|R|O|Ø)?[ \-]*(\d+(?:\.\d+)?)\s*[xX*]\s*(\d+(?:\.\d+)?)(?:\s*[xX*]\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
     if tube_match and not masse:
         val1 = float(tube_match.group(1))
         val2 = float(tube_match.group(2))
@@ -503,12 +504,12 @@ def _enrich_profile(p: Any) -> ProfileOut:
         poids = round(masse * length_val * qty_val, 2)
         
     # Check for PL or TN A*B*C
-    pl_match = re.match(r'(?:PL|TN)\s*(\d+)\*(\d+)\*(\d+)', designation)
+    pl_match = re.search(r'(?:PL|TN)\s*(\d+)\s*\*?\s*(\d+)\s*\*?\s*(\d+)', designation)
     poids_unitaire = None
     if pl_match:
         a, b, c = map(float, pl_match.groups())
-        # Volume en m3 * 7850 kg/m3
-        poids_unitaire = round((a * b * c / 1e9) * 7850, 2)
+        # Volume en m3 * 8000 kg/m3 (Densité métier charpente)
+        poids_unitaire = round((a * b * c / 1e9) * 8000, 3)
         poids = round(poids_unitaire * qty_val, 2)
 
     out = ProfileOut(
