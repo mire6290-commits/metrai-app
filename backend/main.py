@@ -474,8 +474,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
         d = float(d_match.group(1))
         masse = round(math.pi * (d**2) / 4000000 * 7850, 2)
 
-    # TUBES Ronds et Carrés/Rectangulaires
-    tube_match = re.search(r'TUBE[ \-]*(?:C|R|O|Ø)?[ \-]*(\d+(?:\.\d+)?)\s*[xX*]\s*(\d+(?:\.\d+)?)(?:\s*[xX*]\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
+    # TUBES Ronds et Carrés/Rectangulaires (Bulletproof Regex)
+    tube_match = re.search(r'TUBE.*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)(?:\s*[xX\*]\s*(\d+(?:\.\d+)?))?', designation, re.IGNORECASE)
     perimeter_m = None  # Pour la peinture
     
     if tube_match and not masse:
@@ -508,8 +508,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
     if masse is not None:
         poids = round(masse * length_val * qty_val, 2)
         
-    # Check for PL or TN A*B*C
-    pl_match = re.search(r'(?:PL|TN)\s*(\d+)\s*\*?\s*(\d+)\s*\*?\s*(\d+)', designation)
+    # Check for PL, TN, PLATINE, GOUSSET, RAIDISSEUR A*B*C (Bulletproof Regex)
+    pl_match = re.search(r'(?:PL|TN|PLAT|GOUSSET|RAID).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
     poids_unitaire = None
     surface_peinture = None
     
