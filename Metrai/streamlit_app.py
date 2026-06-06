@@ -23,14 +23,24 @@ with st.sidebar:
     st.header("1. Upload du Plan")
     uploaded_file = st.file_uploader("Choisissez un plan PDF", type="pdf", on_change=reset_state)
     
+    st.header("2. Mode d'Extraction")
+    extraction_mode = st.radio(
+        "Comment lire le PDF ?",
+        options=["vision", "text"],
+        format_func=lambda x: "🧠 Vision LLM (Recommandé pour les Dessins/Plans)" if x == "vision" else "📝 Lecture Directe du Texte (Recommandé pour les Nomenclatures/Tableaux exportés de CAD)",
+        help="Si votre PDF contient un tableau de nomenclature généré par logiciel (Tekla, AutoCAD), utilisez la lecture directe du texte pour 100% de précision sans perte.",
+        on_change=reset_state
+    )
+
     if uploaded_file is not None:
         if st.button("Lancer l'analyse AI 🚀", use_container_width=True, type="primary"):
             reset_state()
             st.session_state.analyzed = False
-            with st.spinner("Analyse du plan en cours par l'IA..."):
+            with st.spinner(f"Analyse du plan en cours (Mode: {extraction_mode})..."):
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
-                    response = requests.post(f"{API_URL}/extract", files=files, timeout=120)
+                    data_payload = {"mode": extraction_mode}
+                    response = requests.post(f"{API_URL}/extract", files=files, data=data_payload, timeout=120)
                     
                     if response.status_code == 200:
                         data = response.json()
