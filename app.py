@@ -84,13 +84,19 @@ if uploaded_file is not None:
                     if response.status_code == 200:
                         st.session_state.extraction_result = response.json()
                         st.session_state.is_extracting = False
+                        st.session_state.extraction_error = None
                         st.rerun()
                     else:
-                        st.error(f"Error {response.status_code}: {response.text}")
+                        st.session_state.extraction_error = f"Error {response.status_code}: {response.text}"
                         st.session_state.is_extracting = False
+                        st.rerun()
                 except Exception as e:
-                    st.error(f"Connection Error: Is the Backend running? Details: {str(e)}")
+                    st.session_state.extraction_error = f"Connection Error: Is the Backend running? Details: {str(e)}"
                     st.session_state.is_extracting = False
+                    st.rerun()
+
+    if "extraction_error" in st.session_state and st.session_state.extraction_error:
+        st.error(st.session_state.extraction_error)
 
     if st.session_state.extraction_result is not None:
         result = st.session_state.extraction_result

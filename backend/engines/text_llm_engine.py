@@ -85,7 +85,7 @@ class TextLLMEngine:
                         role=p.get("role", ""),
                         length_m=p.get("length_m"),
                         quantity=int(p.get("quantity") or 1),
-                        zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else p.get("zone", ""),
+                        zone=", ".join(p.get("views_confirmed") or []) if "views_confirmed" in p else (p.get("zone") or ""),
                         confidence=float(p.get("confidence", 0.8)),
                         length_source=p.get("length_source", ""),
                         quantity_note=p.get("quantity_note", ""),

@@ -296,8 +296,10 @@ async def extract(
                 if rep in seen_reperes:
                     existing = seen_reperes[rep]
                     # Combine zones as strings
-                    existing_zones = set([z.strip() for z in existing.zone.split(",") if z.strip()])
-                    new_zones = set([z.strip() for z in p.zone.split(",") if z.strip()])
+                    existing_zone_str = existing.zone if existing.zone else ""
+                    new_zone_str = p.zone if p.zone else ""
+                    existing_zones = set([z.strip() for z in existing_zone_str.split(",") if z.strip()])
+                    new_zones = set([z.strip() for z in new_zone_str.split(",") if z.strip()])
                     existing.zone = ", ".join(sorted(existing_zones.union(new_zones)))
                     # Take the max quantity in case different pages saw partial quantities or one saw the total multiplier
                     existing.quantity = max(existing.quantity, p.quantity)
