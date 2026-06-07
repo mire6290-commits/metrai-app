@@ -164,16 +164,8 @@ if uploaded_file is not None:
             col_dl, col_reset = st.columns([1, 1])
             
             with col_dl:
-                # Prepare data for export, removing pre-calculated static weights so export engine relies on formulas
+                # Prepare data for export
                 export_data = edited_df.copy()
-                if 'poids_total_kg' in export_data.columns:
-                    del export_data['poids_total_kg']
-                if 'poids_unitaire' in export_data.columns:
-                    # Keep poids_unitaire ONLY if masse_lineaire is missing (for fully static plates)
-                    export_data['poids_unitaire'] = export_data.apply(
-                        lambda r: r['poids_unitaire'] if pd.isna(r.get('masse_lineaire_kg_m')) or r.get('masse_lineaire_kg_m') == 0 else None, 
-                        axis=1
-                    )
                 
                 # Replace NA with None for JSON serialization
                 export_data = export_data.where(pd.notnull(export_data), None)
