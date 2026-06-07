@@ -57,6 +57,18 @@ if uploaded_file is not None:
     if st.session_state.extraction_result is None:
         if st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting):
             st.session_state.is_extracting = True
+            
+            # Afficher l'animation Wireframe
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
+            from ui_components import get_wireframe_animation_html
+            import streamlit.components.v1 as components
+            
+            anim_placeholder = st.empty()
+            with anim_placeholder:
+                components.html(get_wireframe_animation_html(), height=450)
+            
             with st.spinner("Analyzing PDF with Agentic Zoning (this may take a few minutes for maximum precision)..."):
                 files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
                 data = {
