@@ -7,6 +7,8 @@ import subprocess
 import socket
 import threading
 
+import sys
+
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
@@ -14,7 +16,7 @@ def is_port_in_use(port: int) -> bool:
 def start_backend():
     if not is_port_in_use(8000):
         print("Starting FastAPI backend...")
-        subprocess.Popen(["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"])
+        subprocess.Popen([sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"])
         time.sleep(3) # Wait for startup
 
 # Start backend if not running
