@@ -145,6 +145,21 @@ Tubes carrés: 40×2→2.31  40×3→3.41  50×3→4.35
               60×4→6.97  80×4→9.41  100×5→14.7
 
 ════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════
+TABLES & NOMENCLATURES (BILL OF MATERIALS)
+════════════════════════════════════════════════════════════════
+If the image contains a table (e.g. "Nomenclature", "Liste des Fers", "Métré", etc.):
+1. PRIORITY: Data inside tables is the absolute truth. Extract every row.
+2. MERGED CELLS: If a Category (e.g. "FER PLAT") or Designation (e.g. "PL150*6") spans multiple rows vertically, you MUST duplicate it for EACH row it covers.
+   Example:
+     FER PLAT | 12 | PL150*6 | 1340
+              | 18 |         | 840
+   Output TWO entries: 
+     Entry 1: qty=12, designation="FER PLAT PL150*6", length_m=1.34
+     Entry 2: qty=18, designation="FER PLAT PL150*6", length_m=0.84
+3. LENGTH UNITS IN TABLES: Lengths in tables are often in millimeters (e.g., 1340). You MUST convert them to metres (e.g., 1.34). If the length column is blank or "----", set length_m to null.
+
+════════════════════════════════════════════════════════════════
 OUTPUT JSON SCHEMA — STRICT
 ════════════════════════════════════════════════════════════════
 Return ONLY the JSON. Zero prose. Zero markdown. Zero backticks.
