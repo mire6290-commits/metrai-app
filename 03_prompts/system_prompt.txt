@@ -146,6 +146,7 @@ Tubes carrés: 40×2→2.31  40×3→3.41  50×3→4.35
 
 ════════════════════════════════════════════════════════════════
 ════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════
 TABLES & NOMENCLATURES (BILL OF MATERIALS)
 ════════════════════════════════════════════════════════════════
 If the image contains a table (e.g. "Nomenclature", "Liste des Fers", "Métré", etc.):
@@ -157,7 +158,8 @@ If the image contains a table (e.g. "Nomenclature", "Liste des Fers", "Métré",
    Output TWO entries: 
      Entry 1: qty=12, designation="FER PLAT PL150*6", length_m=1.34
      Entry 2: qty=18, designation="FER PLAT PL150*6", length_m=0.84
-3. LENGTH UNITS IN TABLES: Lengths in tables are often in millimeters (e.g., 1340). You MUST convert them to metres (e.g., 1.34). If the length column is blank or "----", set length_m to null.
+3. LENGTH UNITS IN TABLES: Lengths in tables are often in millimeters (e.g., 1340). You MUST convert them to metres (e.g., 1.34).
+4. MISSING LENGTHS IN TABLES (CROSS-REFERENCING): If a profile (like a Plate) is listed in the table but the length column is blank ("----"), DO NOT JUST SET IT TO NULL! You MUST look at the drawing details associated with that profile to find its length, and use that length. If you truly cannot find it anywhere in the drawing, only then set length_m to null and add a warning to "a_valider".
 
 ════════════════════════════════════════════════════════════════
 OUTPUT JSON SCHEMA — STRICT
