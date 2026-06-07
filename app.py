@@ -141,7 +141,7 @@ if uploaded_file is not None:
                 "quantity": st.column_config.NumberColumn("🔢 Quantité", min_value=1, step=1),
                 "poids_total_kg": st.column_config.NumberColumn("⚖️ Poids Total (Kg)", disabled=False, format="%.2f"),
                 "zone": st.column_config.TextColumn("Zone", disabled=False),
-                "confidence": st.column_config.ProgressColumn("Confiance IA", min_value=0.0, max_value=1.0, format="%.2f", disabled=True),
+                "confidence": st.column_config.ProgressColumn("Confiance IA", min_value=0.0, max_value=1.0, format="%.2f"),
                 "role": st.column_config.TextColumn("Nomenclature", disabled=False),
                 "masse_lineaire_kg_m": None, # Hide
                 "poids_unitaire": None # Hide
