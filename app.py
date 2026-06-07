@@ -167,10 +167,12 @@ if uploaded_file is not None:
                 # Prepare data for export
                 export_data = edited_df.copy()
                 
-                # Replace NA with None for JSON serialization
-                export_data = export_data.where(pd.notnull(export_data), None)
+                import json
+                # Safely convert DataFrame to JSON serializable list of dicts (handles numpy floats and NaNs)
+                export_json_str = export_data.to_json(orient='records')
+                export_list = json.loads(export_json_str)
                 
-                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_data.to_dict('records')})
+                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_list})
                 if excel_response.status_code == 200:
                     st.download_button(
                         label="📥 Download Excel File (.xlsx)",
