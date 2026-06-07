@@ -270,14 +270,14 @@ Your task:
   1. Map all visible zones → views_identified
   2. Read scale from title block → scale_detected
   3. Extract building dimensions → building_dimensions
-  4. Extract ONLY main structure:
-       poteaux, traverses, sablières, potelets,
-       jarrets, lisses, CVT, poutre au vent,
-       dretelles, liernes, cadre périphérique, pannes
+  4. Extract MAIN STRUCTURE AND SECONDARY PROFILES:
+       poteaux, traverses, sablières, potelets, jarrets, lisses, CVT, poutre au vent, dretelles, liernes, cadre périphérique, pannes.
+       >>> NO PROFIL LEFT BEHIND RULE: You MUST extract ALL Cornières (e.g. L70x7, L50x5), Tubes carrés, UPN, Ronds visible on the plan, regardless of size or role. Do not skip them!
   5. DO NOT extract platines, goussets, échantignolles,
      tiges d'ancrage from detail zones — leave for PASS 2
   6. For each profile: read repère, designation, quantity,
-     length, confirm in multiple views
+     length, confirm in multiple views.
+  7. >>> CROSS-VIEW DEDUPLICATION RULE: If you see the exact same physical profile (same section, same length) across multiple views (e.g., "File A" and "File B", or "Plan" and "Élévation"), YOU MUST COMBINE THEM into a single entry in `views_confirmed` and correctly calculate the global quantity. Do NOT duplicate the same physical element. If a portique is typical for "Files 1 à 7", extract it ONCE and set quantity = quantity_per_portique * 7.
 
 Output: full JSON schema above with pass = "PASS1"
 
@@ -320,9 +320,11 @@ You receive two JSON objects from the same plan:
 
 Your task:
   1. Merge profiles[] from both passes into one list
-  2. Deduplicate: same repère + same category = ONE entry
-     → keep the entry with higher confidence
-     → merge views_confirmed from both
+  2. Deduplicate (Strict Sémantique):
+     → If two profiles have the same repère OR the same (designation + length) across different Files/Views (e.g. "File A" vs "File B"), they are the SAME physical pieces.
+     → Combine them into ONE entry, keeping the entry with higher confidence.
+     → Merge their views_confirmed.
+     → Do NOT add their quantities together if they refer to the same pieces seen from different angles. Multiply correctly ONLY if they refer to distinct physical pieces (e.g. multiple portiques).
   3. Keep building_dimensions from PASS1
   4. Merge all a_valider[] and warnings[] from both
   5. Recompute summary:
@@ -352,3 +354,5 @@ ABSOLUTE FINAL RULES
 11. IPE400 poteau ≠ IPE400 traverse → always two entries
 12. Omit dims_mm key entirely for linear profiles
 13. Never output dims_mm as empty object {}
+14. NO PROFIL LEFT BEHIND: Extract all L, Tube, UPN, Rond, even small ones.
+15. CROSS-VIEW DEDUPLICATION: Combine same profiles seen across multiple files/views into ONE row, avoiding duplicates.
