@@ -53,11 +53,16 @@ def reset_state():
     st.session_state.extraction_result = None
     st.session_state.is_extracting = False
 
+def set_extracting():
+    st.session_state.is_extracting = True
+    st.session_state.extraction_result = None
+    st.session_state.extraction_error = None
+
 if uploaded_file is not None:
     if st.session_state.extraction_result is None:
-        if st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting):
-            st.session_state.is_extracting = True
-            
+        st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting, on_click=set_extracting)
+        
+        if st.session_state.is_extracting:
             # Afficher l'animation Wireframe
             import sys
             import os
