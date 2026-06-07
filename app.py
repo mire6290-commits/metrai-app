@@ -171,8 +171,8 @@ if uploaded_file is not None:
                 export_json_str = export_data.to_json(orient='records')
                 export_list = json.loads(export_json_str)
                 
-                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_list})
-                excel_adv_response = requests.post("http://127.0.0.1:8000/export/excel/advanced", json={"data": export_list})
+                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_list, "project_name": project_name})
+                excel_adv_response = requests.post("http://127.0.0.1:8000/export/excel/advanced", json={"data": export_list, "project_name": project_name})
                 
                 col_btn1, col_btn2 = st.columns(2)
                 

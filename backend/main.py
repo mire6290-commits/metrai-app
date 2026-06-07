@@ -469,6 +469,7 @@ async def extract_status(task_id: str):
 
 class ExportRequest(BaseModel):
     data: list[dict]
+    project_name: str = "METRAI EXPERT"
 
 @app.post("/export/excel")
 async def export_excel(req: ExportRequest):
@@ -486,7 +487,7 @@ async def export_excel(req: ExportRequest):
 @app.post("/export/excel/advanced")
 async def export_excel_advanced(req: ExportRequest):
     from engines.export_engine import ExportEngine
-    excel_bytes = ExportEngine.to_excel_advanced(req.data)
+    excel_bytes = ExportEngine.to_excel_advanced(req.data, req.project_name)
     headers = {
         'Content-Disposition': 'attachment; filename="Metre_Avance.xlsx"'
     }

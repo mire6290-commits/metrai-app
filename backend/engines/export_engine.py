@@ -247,7 +247,7 @@ class ExportEngine:
         return output.getvalue()
 
     @staticmethod
-    def to_excel_advanced(data: List[Dict[str, Any]]) -> bytes:
+    def to_excel_advanced(data: list, project_name: str = "METRAI EXPERT") -> bytes:
         """
         Génère un fichier Excel Avancé avec 2 onglets:
         1. Détails de Fabrication (Regroupés par famille)
@@ -256,6 +256,7 @@ class ExportEngine:
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
         from itertools import groupby
+        from datetime import datetime
         import re
 
         wb = Workbook()
@@ -269,12 +270,26 @@ class ExportEngine:
         header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        thick_border = Border(left=Side(style='medium'), right=Side(style='medium'), top=Side(style='medium'), bottom=Side(style='medium'))
         
-        ws_details.cell(row=2, column=2, value="LISTE DE DÉBIT & DÉTAILS").font = Font(bold=True, size=14, color="1F4E78")
+        # Cartouche (En-tête professionnel)
+        ws_details.merge_cells('B2:F3')
+        title_cell = ws_details.cell(row=2, column=2, value="NOMENCLATURE ET LISTE DE DÉBIT - CHARPENTE MÉTALLIQUE")
+        title_cell.font = Font(name="Calibri", bold=True, size=16, color="1F4E78")
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell.border = thick_border
         
-        headers = ["Repère", "Nomenclature", "Profilé", "Long (mm)", "Quantité", "Poids Unit (Kg)", "Poids Tot (Kg)", "Observation"]
+        ws_details.merge_cells('G2:I2')
+        ws_details.cell(row=2, column=7, value=f"Projet : {project_name}").font = Font(bold=True)
+        ws_details.cell(row=2, column=7).border = thick_border
+        
+        ws_details.merge_cells('G3:I3')
+        ws_details.cell(row=3, column=7, value=f"Date : {datetime.now().strftime('%d/%m/%Y')}").font = Font(italic=True)
+        ws_details.cell(row=3, column=7).border = thick_border
+        
+        headers = ["Repère", "Nomenclature", "Profilé", "Nuance", "Long (mm)", "Quantité", "Poids Unit (Kg)", "Poids Tot (Kg)", "Observation"]
         for col_num, header in enumerate(headers, 1):
-            cell = ws_details.cell(row=5, column=col_num, value=header)
+            cell = ws_details.cell(row=6, column=col_num, value=header)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = center_align
@@ -299,13 +314,13 @@ class ExportEngine:
             
         data_sorted = sorted(data_enriched, key=lambda x: (x['famille'], str(x.get('role', '')), str(x.get('designation', ''))))
         
-        current_row = 6
+        current_row = 7
         totals_famille = {}
         total_global = 0.0
         total_surface = 0.0
         
         for famille, group in groupby(data_sorted, key=lambda x: x['famille']):
-            ws_details.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=8)
+            ws_details.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=9)
             fam_cell = ws_details.cell(row=current_row, column=1, value=famille)
             fam_cell.font = Font(bold=True, italic=True)
             fam_cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
@@ -325,9 +340,13 @@ class ExportEngine:
                 try: surf = float(surf_raw)
                 except: surf = 0.0
                 
+                # Compute unit weight if missing
                 punt_raw = item.get('poids_unitaire', 0)
                 try: punt = float(punt_raw)
                 except: punt = 0.0
+                
+                if punt == 0 and ptot > 0 and qty > 0:
+                    punt = ptot / qty
                 
                 poids_famille += ptot
                 total_global += ptot
@@ -341,6 +360,7 @@ class ExportEngine:
                     item.get('repere'),
                     str(item.get('role', 'AUTRES')).upper(),
                     str(item.get('designation', '')),
+                    "S235", # Nuance default
                     l_mm if l_mm > 0 else "----",
                     qty,
                     round(punt, 2) if punt > 0 else "----",
@@ -352,16 +372,63 @@ class ExportEngine:
                     c = ws_details.cell(row=current_row, column=col_num, value=val)
                     c.alignment = center_align
                     c.border = thin_border
-                    if col_num == 8 and "⚠️" in obs:
+                    if col_num == 9 and "⚠️" in obs:
                         c.font = Font(color="FF0000")
                 current_row += 1
                 
             totals_famille[famille] = poids_famille
-            current_row += 1 
             
-        col_widths_det = {'A': 12, 'B': 25, 'C': 20, 'D': 15, 'E': 10, 'F': 15, 'G': 15, 'H': 25}
+            # Sous-total de famille
+            ws_details.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=7)
+            sub_cell = ws_details.cell(row=current_row, column=1, value=f"Sous-Total {famille}")
+            sub_cell.alignment = Alignment(horizontal="right", vertical="center")
+            sub_cell.font = Font(bold=True, color="44546A")
+            sub_cell.border = thin_border
+            
+            c_val = ws_details.cell(row=current_row, column=8, value=round(poids_famille, 2))
+            c_val.font = Font(bold=True)
+            c_val.border = thin_border
+            c_val.alignment = center_align
+            
+            ws_details.cell(row=current_row, column=9).border = thin_border
+            
+            current_row += 2 # Espace
+            
+        col_widths_det = {'A': 12, 'B': 25, 'C': 20, 'D': 10, 'E': 15, 'F': 10, 'G': 15, 'H': 15, 'I': 25}
         for col, width in col_widths_det.items():
             ws_details.column_dimensions[col].width = width
+            
+        # Total Bas de page
+        current_row += 1
+        ws_details.cell(row=current_row, column=7, value="TOTAL BRUT (Kg)").font = Font(bold=True)
+        ws_details.cell(row=current_row, column=8, value=round(total_global, 2)).font = Font(bold=True)
+        ws_details.cell(row=current_row, column=8).alignment = center_align
+        ws_details.cell(row=current_row, column=7).border = thin_border
+        ws_details.cell(row=current_row, column=8).border = thin_border
+        current_row += 1
+        
+        has_boulons = any("BOULON" in str(i.get('designation', '')).upper() or "BOULON" in str(i.get('role', '')).upper() for i in data)
+        pourcentage_boulons = 0.02 if has_boulons else 0.05
+        poids_boulons = total_global * pourcentage_boulons
+        grand_total = total_global + poids_boulons
+        
+        ws_details.cell(row=current_row, column=7, value="BOULONNERIE/SOUDURE").font = Font(bold=True)
+        ws_details.cell(row=current_row, column=8, value=round(poids_boulons, 2)).font = Font(bold=True)
+        ws_details.cell(row=current_row, column=8).alignment = center_align
+        ws_details.cell(row=current_row, column=7).border = thin_border
+        ws_details.cell(row=current_row, column=8).border = thin_border
+        current_row += 1
+        
+        cell_net = ws_details.cell(row=current_row, column=7, value="TOTAL NET (Kg)")
+        cell_net.font = Font(bold=True, size=12, color="FFFFFF")
+        cell_net.fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+        cell_net.border = thick_border
+        
+        cell_net_val = ws_details.cell(row=current_row, column=8, value=round(grand_total, 2))
+        cell_net_val.font = Font(bold=True, size=12, color="FFFFFF")
+        cell_net_val.fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+        cell_net_val.border = thick_border
+        cell_net_val.alignment = center_align
             
         # --- ONGLET 2: Synthèse Globale ---
         ws_synth = wb.create_sheet(title="Synthèse Globale")
@@ -377,12 +444,6 @@ class ExportEngine:
             cell.border = thin_border
             
         r = 6
-        has_boulons = any("BOULON" in str(i.get('designation', '')).upper() or "BOULON" in str(i.get('role', '')).upper() for i in data)
-        pourcentage_boulons = 0.02 if has_boulons else 0.05
-        poids_boulons = total_global * pourcentage_boulons
-        
-        grand_total = total_global + poids_boulons
-        
         for fam, poids in totals_famille.items():
             ws_synth.cell(row=r, column=2, value=fam).border = thin_border
             ws_synth.cell(row=r, column=3, value=round(poids, 2)).border = thin_border
@@ -425,10 +486,10 @@ class ExportEngine:
         for col, width in col_widths_synth.items():
             ws_synth.column_dimensions[col].width = width
 
+        import io
         output = io.BytesIO()
         wb.save(output)
         return output.getvalue()
-
     @staticmethod
     def to_pdf(data: List[Dict[str, Any]]) -> bytes:
         """
