@@ -3,20 +3,27 @@ import requests
 import time
 import pandas as pd
 import io
-import subprocess
-import socket
-import threading
-
 import sys
+import os
+import threading
+import socket
+
+sys.path.insert(0, os.path.abspath('backend'))
 
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+def run_uvicorn():
+    import uvicorn
+    from backend import main
+    uvicorn.run(main.app, host="127.0.0.1", port=8000, log_level="error")
 
 def start_backend():
     if not is_port_in_use(8000):
-        print("Starting FastAPI backend...")
-        subprocess.Popen([sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"])
+        print("Starting FastAPI backend in a background thread...")
+        t = threading.Thread(target=run_uvicorn, daemon=True)
+        t.start()
         time.sleep(3) # Wait for startup
 
 # Start backend if not running
@@ -51,7 +58,7 @@ if uploaded_file is not None:
             
             try:
                 # Call local FastAPI backend
-                response = requests.post("http://localhost:8000/extract", files=files, data=data, timeout=600)
+                response = requests.post("http://127.0.0.1:8000/extract", files=files, data=data, timeout=600)
                 
                 if response.status_code == 200:
                     result = response.json()
@@ -95,7 +102,7 @@ if uploaded_file is not None:
                         st.divider()
                         
                         # Export Excel
-                        excel_response = requests.post("http://localhost:8000/export/excel", json={"data": result['profiles']})
+                        excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": result['profiles']})
                         if excel_response.status_code == 200:
                             st.download_button(
                                 label="📥 Download Excel File (.xlsx)",
