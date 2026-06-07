@@ -160,12 +160,12 @@ async def extract(
 
     try:
         # Determine pages to process
-        page_images = _parser.render_pages(str(tmp_path))
-        if pages != "all":
-            requested = {int(p.strip()) for p in pages.split(",")}
-            page_images = [p for p in page_images if p.page_number in requested]
-
-        if not page_images:
+        import fitz
+        doc = fitz.open(str(tmp_path))
+        total_pages_pdf = len(doc)
+        doc.close()
+        
+        if total_pages_pdf == 0:
             raise HTTPException(status_code=400, detail="No valid pages found")
 
         context = {
@@ -184,13 +184,22 @@ async def extract(
         else:
             # Agentic Zoning Architecture
             logger.info("Using VisionLLMEngine with Agentic Zoning.")
-            _parser.dpi = 300 # Force high resolution for maximum precision
-            page_images = _parser.render_pages(str(tmp_path))
+            _parser.dpi = 150 # Prevent Streamlit Cloud OOM crash on large drawings
+            
+            import fitz
+            doc = fitz.open(str(tmp_path))
+            num_pages = len(doc)
+            doc.close()
+            
             if pages != "all":
                 requested = {int(p.strip()) for p in pages.split(",")}
-                page_images = [p for p in page_images if p.page_number in requested]
-
-            for page_img in page_images:
+            else:
+                requested = set(range(1, num_pages + 1))
+                
+            for page_num in sorted(list(requested)):
+                if page_num < 1 or page_num > num_pages:
+                    continue
+                page_img = _parser.render_page(str(tmp_path), page_num)
                 # 3-PASS Agentic Zoning Architecture
                 logger.info(f"Applying 3-Pass Architecture for page {page_img.page_number}...")
                 

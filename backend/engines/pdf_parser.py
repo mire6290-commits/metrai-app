@@ -53,7 +53,7 @@ class PDFParser:
     128 px overlap ensures annotations near tile edges are not missed.
     """
 
-    DEFAULT_DPI = 200
+    DEFAULT_DPI = 150
     TILE_SIZE = 2048
     TILE_OVERLAP = 256
 
@@ -153,12 +153,14 @@ class PDFParser:
         zoom = self.dpi / 72.0   # fitz default is 72 DPI
         mat = fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat, alpha=False)
-        img_bytes = pix.tobytes("png")
-        return Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        # Convert directly from pixmap memory to PIL Image without intermediate PNG buffer (avoids OOM on large CAD drawings)
+        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
     @staticmethod
-    def pil_to_bytes(image: Image.Image, fmt: str = "PNG") -> bytes:
+    def pil_to_bytes(image: Image.Image, fmt: str = "JPEG") -> bytes:
         """Convert a PIL Image to raw bytes (for API calls)."""
         buf = io.BytesIO()
-        image.save(buf, format=fmt)
+        if image.mode in ('RGBA', 'P'):
+            image = image.convert('RGB')
+        image.save(buf, format=fmt, quality=85)
         return buf.getvalue()

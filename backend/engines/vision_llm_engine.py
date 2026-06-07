@@ -474,5 +474,7 @@ def merge_tile_results(results: list[VisionResult]) -> VisionResult:
 
 def _pil_to_base64(image: Image.Image) -> str:
     buf = io.BytesIO()
-    image.save(buf, format="PNG")
+    if image.mode in ('RGBA', 'P'):
+        image = image.convert('RGB')
+    image.save(buf, format="JPEG", quality=85)
     return base64.standard_b64encode(buf.getvalue()).decode("utf-8")
