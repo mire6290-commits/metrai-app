@@ -34,20 +34,20 @@ st.set_page_config(page_title="Métré Automatisé 🏗️", layout="wide", page
 st.title("🏗️ Métré Automatisé - Charpente Métallique")
 st.markdown("Extract structural steel profiles from your drawings with 100% precision using Agentic Zoning.")
 
-# Sidebar Configuration
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    project_name = st.text_input("Project Name", value="Mon Projet")
-    scale_hint = st.text_input("Scale Hint (Optional)", value="1:50")
-    pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
-    mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
-    
-uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'])
-
 if 'extraction_result' not in st.session_state:
     st.session_state.extraction_result = None
 if 'is_extracting' not in st.session_state:
     st.session_state.is_extracting = False
+
+# Sidebar Configuration
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    project_name = st.text_input("Project Name", value="Mon Projet", disabled=st.session_state.is_extracting)
+    scale_hint = st.text_input("Scale Hint (Optional)", value="1:50", disabled=st.session_state.is_extracting)
+    pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'", disabled=st.session_state.is_extracting)
+    mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"], disabled=st.session_state.is_extracting)
+    
+uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'], disabled=st.session_state.is_extracting)
 
 def reset_state():
     st.session_state.extraction_result = None
