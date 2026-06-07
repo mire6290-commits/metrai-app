@@ -474,10 +474,26 @@ class ExportRequest(BaseModel):
 async def export_excel(req: ExportRequest):
     from engines.export_engine import ExportEngine
     excel_bytes = ExportEngine.to_excel(req.data)
+    headers = {
+        'Content-Disposition': 'attachment; filename="Metre_Automatique.xlsx"'
+    }
     return Response(
         content=excel_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=metrai_export.xlsx"}
+        headers=headers
+    )
+
+@app.post("/export/excel/advanced")
+async def export_excel_advanced(req: ExportRequest):
+    from engines.export_engine import ExportEngine
+    excel_bytes = ExportEngine.to_excel_advanced(req.data)
+    headers = {
+        'Content-Disposition': 'attachment; filename="Metre_Avance.xlsx"'
+    }
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
     )
 
 @app.get("/profiles/catalog")

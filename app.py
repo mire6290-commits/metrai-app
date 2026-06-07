@@ -168,19 +168,33 @@ if uploaded_file is not None:
                 export_data = edited_df.copy()
                 
                 import json
-                # Safely convert DataFrame to JSON serializable list of dicts (handles numpy floats and NaNs)
                 export_json_str = export_data.to_json(orient='records')
                 export_list = json.loads(export_json_str)
                 
                 excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_list})
-                if excel_response.status_code == 200:
-                    st.download_button(
-                        label="📥 Download Excel File (.xlsx)",
-                        data=excel_response.content,
-                        file_name=f"Metre_{project_name}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        type="primary"
-                    )
+                excel_adv_response = requests.post("http://127.0.0.1:8000/export/excel/advanced", json={"data": export_list})
+                
+                col_btn1, col_btn2 = st.columns(2)
+                
+                with col_btn1:
+                    if excel_response.status_code == 200:
+                        st.download_button(
+                            label="📥 Télécharger Excel (Standard)",
+                            data=excel_response.content,
+                            file_name=f"Metre_{project_name}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                with col_btn2:
+                    if excel_adv_response.status_code == 200:
+                        st.download_button(
+                            label="📊 Télécharger Excel (Avancé & Synthèse)",
+                            data=excel_adv_response.content,
+                            file_name=f"Metre_Avance_{project_name}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary",
+                            use_container_width=True
+                        )
             
             with col_reset:
                 st.button("🔄 Analyser un autre plan", on_click=reset_state)
