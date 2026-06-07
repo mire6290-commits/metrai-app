@@ -247,7 +247,7 @@ class ExportEngine:
         return output.getvalue()
 
     @staticmethod
-    def to_excel_advanced(data: list, project_name: str = "METRAI EXPERT") -> bytes:
+    def to_excel_advanced(data: list, project_name: str = "METRAI EXPERT", metadata: dict | None = None) -> bytes:
         """
         Génère un fichier Excel Avancé avec 2 onglets:
         1. Détails de Fabrication (Regroupés par famille)
@@ -269,23 +269,60 @@ class ExportEngine:
         header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
         thick_border = Border(left=Side(style='medium'), right=Side(style='medium'), top=Side(style='medium'), bottom=Side(style='medium'))
         
+        # Metadata parsing
+        if metadata is None: metadata = {}
+        meta_entreprise = metadata.get("entreprise") or ""
+        meta_projet = metadata.get("projet") or project_name
+        meta_dess = metadata.get("dessinateur") or ""
+        meta_date = metadata.get("date_plan") or datetime.now().strftime('%d/%m/%Y')
+        meta_indice = metadata.get("indice") or "A"
+
         # Cartouche (En-tête professionnel)
-        ws_details.merge_cells('B2:F3')
-        title_cell = ws_details.cell(row=2, column=2, value="NOMENCLATURE ET LISTE DE DÉBIT - CHARPENTE MÉTALLIQUE")
+        
+        # Espace LOGO (Fusionné)
+        ws_details.merge_cells('A1:B4')
+        logo_cell = ws_details.cell(row=1, column=1, value="[ INSÉRER VOTRE LOGO ICI ]")
+        logo_cell.font = Font(name="Calibri", italic=True, size=10, color="808080")
+        logo_cell.alignment = center_align
+        logo_cell.border = thick_border
+        
+        # Titre Central
+        ws_details.merge_cells('C1:F4')
+        title_cell = ws_details.cell(row=1, column=3, value="NOMENCLATURE ET LISTE DE DÉBIT\nCHARPENTE MÉTALLIQUE")
         title_cell.font = Font(name="Calibri", bold=True, size=16, color="1F4E78")
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell.alignment = center_align
         title_cell.border = thick_border
         
-        ws_details.merge_cells('G2:I2')
-        ws_details.cell(row=2, column=7, value=f"Projet : {project_name}").font = Font(bold=True)
-        ws_details.cell(row=2, column=7).border = thick_border
+        # Bloc d'informations Projet (Droite)
+        ws_details.merge_cells('G1:I1')
+        ws_details.cell(row=1, column=7, value=f"🏢 Entreprise : {meta_entreprise}").font = Font(bold=True)
+        ws_details.cell(row=1, column=7).border = thin_border
         
-        ws_details.merge_cells('G3:I3')
-        ws_details.cell(row=3, column=7, value=f"Date : {datetime.now().strftime('%d/%m/%Y')}").font = Font(italic=True)
-        ws_details.cell(row=3, column=7).border = thick_border
+        ws_details.merge_cells('G2:I2')
+        ws_details.cell(row=2, column=7, value=f"🏗️ Projet : {meta_projet}").font = Font(bold=True)
+        ws_details.cell(row=2, column=7).border = thin_border
+        
+        ws_details.merge_cells('G3:H3')
+        ws_details.cell(row=3, column=7, value=f"✍️ Dessinateur : {meta_dess}").font = Font(italic=True)
+        ws_details.cell(row=3, column=7).border = thin_border
+        
+        ws_details.cell(row=3, column=9, value=f"Indice : {meta_indice}").font = Font(bold=True)
+        ws_details.cell(row=3, column=9).border = thin_border
+        
+        ws_details.merge_cells('G4:I4')
+        ws_details.cell(row=4, column=7, value=f"📅 Date : {meta_date}").font = Font(italic=True)
+        ws_details.cell(row=4, column=7).border = thin_border
+        
+        # Outline de tout le bloc infos
+        for r in range(1, 5):
+            ws_details.cell(row=r, column=9).border = Border(right=Side(style='medium'), top=ws_details.cell(row=r, column=9).border.top, bottom=ws_details.cell(row=r, column=9).border.bottom, left=ws_details.cell(row=r, column=9).border.left)
+        ws_details.cell(row=1, column=7).border = Border(top=Side(style='medium'), left=Side(style='thin'), right=Side(style='medium'), bottom=Side(style='thin'))
+        ws_details.cell(row=4, column=7).border = Border(bottom=Side(style='medium'), left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'))
+        ws_details.cell(row=4, column=9).border = Border(bottom=Side(style='medium'), right=Side(style='medium'), left=Side(style='thin'), top=Side(style='thin'))
         
         headers = ["Repère", "Nomenclature", "Profilé", "Nuance", "Long (mm)", "Quantité", "Poids Unit (Kg)", "Poids Tot (Kg)", "Observation"]
         for col_num, header in enumerate(headers, 1):

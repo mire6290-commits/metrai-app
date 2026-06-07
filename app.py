@@ -107,6 +107,27 @@ if uploaded_file is not None:
                 for w in result['warnings']:
                     st.warning(w)
         
+        st.markdown("### 📋 Informations du Projet (Cartouche)")
+        meta = result.get('metadata') or {}
+        
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            meta_entreprise = st.text_input("Entreprise / Bureau d'étude", value=meta.get("entreprise") or "")
+            meta_projet = st.text_input("Projet / Affaire", value=meta.get("projet") or project_name)
+        with col_m2:
+            meta_dessinateur = st.text_input("Dessinateur", value=meta.get("dessinateur") or "")
+            meta_date = st.text_input("Date du Plan", value=meta.get("date_plan") or "")
+        with col_m3:
+            meta_indice = st.text_input("Indice", value=meta.get("indice") or "A")
+            
+        edited_metadata = {
+            "entreprise": meta_entreprise,
+            "projet": meta_projet,
+            "dessinateur": meta_dessinateur,
+            "date_plan": meta_date,
+            "indice": meta_indice
+        }
+        
         if result['profiles']:
             df = pd.DataFrame(result['profiles'])
             
@@ -184,7 +205,7 @@ if uploaded_file is not None:
                 export_list = json.loads(export_json_str)
                 
                 excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_list, "project_name": project_name})
-                excel_adv_response = requests.post("http://127.0.0.1:8000/export/excel/advanced", json={"data": export_list, "project_name": project_name})
+                excel_adv_response = requests.post("http://127.0.0.1:8000/export/excel/advanced", json={"data": export_list, "project_name": meta_projet, "metadata": edited_metadata})
                 
                 col_btn1, col_btn2 = st.columns(2)
                 

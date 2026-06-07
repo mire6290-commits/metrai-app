@@ -113,6 +113,7 @@ class TextLLMEngine:
             return VisionResult(
                 scale_detected=data.get("scale_detected"),
                 scale_confidence=float(data.get("scale_confidence", 0.0)),
+                metadata=data.get("metadata", {}),
                 building_dimensions=data.get("building_dimensions"),
                 profiles=profiles,
                 verification=data.get("verification"),

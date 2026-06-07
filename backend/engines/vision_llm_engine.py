@@ -61,6 +61,7 @@ class DetectedProfile:
 class VisionResult:
     scale_detected: str | None
     scale_confidence: float
+    metadata: dict | None
     profiles: list[DetectedProfile]
     unreadable_zones: list[str]
     warnings: list[str]
@@ -383,6 +384,7 @@ class VisionLLMEngine:
         return VisionResult(
             scale_detected=data.get("scale_detected"),
             scale_confidence=float(data.get("scale_confidence", 0.0)),
+            metadata=data.get("metadata", {}),
             profiles=profiles,
             unreadable_zones=data.get("unreadable_zones", []),
             warnings=warns,

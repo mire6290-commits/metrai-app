@@ -116,6 +116,7 @@ class ExtractionResponse(BaseModel):
     pages_processed: int
     scale_detected: str | None
     drawing_type: str
+    metadata: dict | None = None
     profiles: list[ProfileOut]
     unreadable_zones: list[str]
     warnings: list[str]
@@ -271,8 +272,11 @@ async def extract(
         scale_detected = None
         drawing_type = "unknown"
         provider_used = "none"
+        final_metadata = {}
 
         for r in all_results:
+            if hasattr(r, 'metadata') and r.metadata:
+                final_metadata.update(r.metadata)
             all_profiles_raw.extend(r.profiles)
             all_warnings.extend(r.warnings)
             all_unreadable.extend(r.unreadable_zones)
@@ -296,6 +300,7 @@ async def extract(
             pages_processed=len(all_results),
             scale_detected=scale_detected,
             drawing_type=drawing_type,
+            metadata=final_metadata,
             profiles=profiles_out,
             unreadable_zones=list(set(all_unreadable)),
             warnings=list(set(all_warnings)),
@@ -470,6 +475,7 @@ async def extract_status(task_id: str):
 class ExportRequest(BaseModel):
     data: list[dict]
     project_name: str = "METRAI EXPERT"
+    metadata: dict | None = None
 
 @app.post("/export/excel")
 async def export_excel(req: ExportRequest):
@@ -487,7 +493,7 @@ async def export_excel(req: ExportRequest):
 @app.post("/export/excel/advanced")
 async def export_excel_advanced(req: ExportRequest):
     from engines.export_engine import ExportEngine
-    excel_bytes = ExportEngine.to_excel_advanced(req.data, req.project_name)
+    excel_bytes = ExportEngine.to_excel_advanced(req.data, req.project_name, metadata=req.metadata)
     headers = {
         'Content-Disposition': 'attachment; filename="Metre_Avance.xlsx"'
     }
