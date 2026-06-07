@@ -97,21 +97,66 @@ if uploaded_file is not None:
         
         if result['profiles']:
             df = pd.DataFrame(result['profiles'])
-            cols = ['designation', 'length_m', 'quantity', 'poids_total_kg', 'zone', 'confidence', 'role']
+            
+            st.markdown("### 📝 Vérification et Complétion (Human-in-the-loop)")
+            st.info("💡 **Instructions** : Les longueurs vides ou suspectes s'affichent avec une icône 📏. Double-cliquez sur une case pour la modifier. Les poids seront recalculés automatiquement à l'export.")
+            
+            # Columns configuration for st.data_editor
+            column_config = {
+                "designation": st.column_config.TextColumn("Profil (Désignation)", disabled=True),
+                "length_m": st.column_config.NumberColumn("📏 Longueur (m) [À VÉRIFIER]", help="Complétez les longueurs manquantes", min_value=0.0, format="%.3f"),
+                "quantity": st.column_config.NumberColumn("🔢 Quantité", min_value=1, step=1),
+                "poids_total_kg": st.column_config.NumberColumn("⚖️ Poids Total (Kg)", disabled=True, format="%.2f"),
+                "zone": st.column_config.TextColumn("Zone", disabled=True),
+                "confidence": st.column_config.ProgressColumn("Confiance IA", min_value=0, max_value=1, format="%.2f", disabled=True),
+                "role": st.column_config.TextColumn("Nomenclature", disabled=False),
+                "masse_lineaire_kg_m": None, # Hide
+                "poids_unitaire": None # Hide
+            }
+            
+            cols = ['role', 'designation', 'length_m', 'quantity', 'poids_total_kg', 'zone', 'confidence', 'masse_lineaire_kg_m', 'poids_unitaire']
             df_display = df[[c for c in cols if c in df.columns]]
-            st.dataframe(df_display, use_container_width=True)
+            
+            # Show editable dataframe
+            edited_df = st.data_editor(
+                df_display,
+                column_config=column_config,
+                use_container_width=True,
+                num_rows="dynamic",
+                key="editor"
+            )
+            
+            # Recalculate weights locally based on edited lengths/quantities
+            def recalc_row(row):
+                qty = row.get('quantity', 1)
+                l_m = row.get('length_m', 0.0)
+                if pd.isna(l_m): l_m = 0.0
+                if pd.isna(qty): qty = 1
+                
+                # Use pre-calculated static unit weight if present (for plates with 3 dims)
+                p_unt = row.get('poids_unitaire')
+                if pd.isna(p_unt) or p_unt is None:
+                    # Otherwise use masse_lineaire * length
+                    m_lin = row.get('masse_lineaire_kg_m', 0.0)
+                    if pd.isna(m_lin): m_lin = 0.0
+                    p_unt = m_lin * l_m
+                    
+                ptot = p_unt * qty
+                return round(ptot, 2)
+                
+            edited_df['poids_total_kg'] = edited_df.apply(recalc_row, axis=1)
             
             st.markdown("### 📊 Récapitulatif Net")
-            tot_brut = result['total_weight_kg']
+            tot_brut = edited_df['poids_total_kg'].sum()
             
-            has_bolts = df_display['designation'].str.upper().str.contains('BOULON').any() or ('role' in df_display.columns and df_display['role'].str.upper().str.contains('BOULON').any())
+            has_bolts = edited_df['designation'].str.upper().str.contains('BOULON').any() or ('role' in edited_df.columns and edited_df['role'].str.upper().str.contains('BOULON').any())
             pourcentage = 0.02 if has_bolts else 0.05
             boul_label = "SOUDAGE (2%)" if has_bolts else "BOULONNERIE + SOUDAGE (5%)"
             boul_val = round(tot_brut * pourcentage, 3)
             tot_net = round(tot_brut + boul_val, 3)
             
             colA, colB, colC = st.columns(3)
-            colA.metric("Poids Brut", f"{tot_brut} kg")
+            colA.metric("Poids Brut Recalculé", f"{round(tot_brut, 2)} kg")
             colB.metric(boul_label, f"{boul_val} kg")
             colC.metric("Poids Tot Net en Kg", f"{tot_net} kg")
             st.divider()
@@ -119,7 +164,21 @@ if uploaded_file is not None:
             col_dl, col_reset = st.columns([1, 1])
             
             with col_dl:
-                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": result['profiles']})
+                # Prepare data for export, removing pre-calculated static weights so export engine relies on formulas
+                export_data = edited_df.copy()
+                if 'poids_total_kg' in export_data.columns:
+                    del export_data['poids_total_kg']
+                if 'poids_unitaire' in export_data.columns:
+                    # Keep poids_unitaire ONLY if masse_lineaire is missing (for fully static plates)
+                    export_data['poids_unitaire'] = export_data.apply(
+                        lambda r: r['poids_unitaire'] if pd.isna(r.get('masse_lineaire_kg_m')) or r.get('masse_lineaire_kg_m') == 0 else None, 
+                        axis=1
+                    )
+                
+                # Replace NA with None for JSON serialization
+                export_data = export_data.where(pd.notnull(export_data), None)
+                
+                excel_response = requests.post("http://127.0.0.1:8000/export/excel", json={"data": export_data.to_dict('records')})
                 if excel_response.status_code == 200:
                     st.download_button(
                         label="📥 Download Excel File (.xlsx)",
