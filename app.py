@@ -136,12 +136,12 @@ if uploaded_file is not None:
             
             # Columns configuration for st.data_editor
             column_config = {
-                "designation": st.column_config.TextColumn("Profil (Désignation)", disabled=True),
+                "designation": st.column_config.TextColumn("Profil (Désignation)", disabled=False),
                 "length_m": st.column_config.NumberColumn("📏 Longueur (m) [À VÉRIFIER]", help="Complétez les longueurs manquantes", min_value=0.0, format="%.3f"),
                 "quantity": st.column_config.NumberColumn("🔢 Quantité", min_value=1, step=1),
-                "poids_total_kg": st.column_config.NumberColumn("⚖️ Poids Total (Kg)", disabled=True, format="%.2f"),
-                "zone": st.column_config.TextColumn("Zone", disabled=True),
-                "confidence": st.column_config.ProgressColumn("Confiance IA", min_value=0.0, max_value=1.0, format="%.2f"),
+                "poids_total_kg": st.column_config.NumberColumn("⚖️ Poids Total (Kg)", disabled=False, format="%.2f"),
+                "zone": st.column_config.TextColumn("Zone", disabled=False),
+                "confidence": st.column_config.ProgressColumn("Confiance IA", min_value=0.0, max_value=1.0, format="%.2f", disabled=True),
                 "role": st.column_config.TextColumn("Nomenclature", disabled=False),
                 "masse_lineaire_kg_m": None, # Hide
                 "poids_unitaire": None # Hide
@@ -160,24 +160,40 @@ if uploaded_file is not None:
             )
             
             # Recalculate weights locally based on edited lengths/quantities
-            def recalc_row(row):
-                qty = row.get('quantity', 1)
-                l_m = row.get('length_m', 0.0)
-                if pd.isna(l_m): l_m = 0.0
-                if pd.isna(qty): qty = 1
-                
-                # Use pre-calculated static unit weight if present (for plates with 3 dims)
-                p_unt = row.get('poids_unitaire')
-                if pd.isna(p_unt) or p_unt is None:
-                    # Otherwise use masse_lineaire * length
-                    m_lin = row.get('masse_lineaire_kg_m', 0.0)
-                    if pd.isna(m_lin): m_lin = 0.0
-                    p_unt = m_lin * l_m
+            for idx, row in edited_df.iterrows():
+                try:
+                    # Handle None/NaN properly for comparison
+                    orig_l = df_display.at[idx, 'length_m'] if not pd.isna(df_display.at[idx, 'length_m']) else 0
+                    new_l = row['length_m'] if not pd.isna(row['length_m']) else 0
                     
-                ptot = p_unt * qty
-                return round(ptot, 2)
-                
-            edited_df['poids_total_kg'] = edited_df.apply(recalc_row, axis=1)
+                    orig_q = df_display.at[idx, 'quantity'] if not pd.isna(df_display.at[idx, 'quantity']) else 0
+                    new_q = row['quantity'] if not pd.isna(row['quantity']) else 0
+                    
+                    orig_w = df_display.at[idx, 'poids_total_kg'] if not pd.isna(df_display.at[idx, 'poids_total_kg']) else 0
+                    new_w = row['poids_total_kg'] if not pd.isna(row['poids_total_kg']) else 0
+                    
+                    l_changed = orig_l != new_l
+                    q_changed = orig_q != new_q
+                    w_changed = orig_w != new_w
+                    
+                    if w_changed and not (l_changed or q_changed):
+                        # User manually changed the weight directly, keep their custom weight
+                        edited_df.at[idx, 'poids_total_kg'] = new_w
+                    else:
+                        # Auto-recalculate
+                        qty = new_q if new_q != 0 else 1
+                        l_m = new_l
+                        
+                        p_unt = row.get('poids_unitaire')
+                        if pd.isna(p_unt) or p_unt is None:
+                            m_lin = row.get('masse_lineaire_kg_m', 0.0)
+                            if pd.isna(m_lin): m_lin = 0.0
+                            p_unt = m_lin * l_m
+                            
+                        ptot = p_unt * qty
+                        edited_df.at[idx, 'poids_total_kg'] = round(ptot, 2)
+                except Exception as e:
+                    pass
             
             st.markdown("### 📊 Récapitulatif Net")
             tot_brut = edited_df['poids_total_kg'].sum()
