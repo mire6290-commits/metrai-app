@@ -290,12 +290,15 @@ async def extract(
         deduped_profiles_raw = []
         seen_reperes = {}
         for p in all_profiles_raw:
-            rep = (p.repere or "").strip().upper()
+            rep = (p.id or "").strip().upper()
             # P000 or unknown are placeholders from LLM, don't dedup them purely by repere
             if rep and rep not in ["", "P000", "UNKNOWN", "NONE", "N/A"]:
                 if rep in seen_reperes:
                     existing = seen_reperes[rep]
-                    existing.views_confirmed = list(set(existing.views_confirmed + p.views_confirmed))
+                    # Combine zones as strings
+                    existing_zones = set([z.strip() for z in existing.zone.split(",") if z.strip()])
+                    new_zones = set([z.strip() for z in p.zone.split(",") if z.strip()])
+                    existing.zone = ", ".join(sorted(existing_zones.union(new_zones)))
                     # Take the max quantity in case different pages saw partial quantities or one saw the total multiplier
                     existing.quantity = max(existing.quantity, p.quantity)
                 else:
