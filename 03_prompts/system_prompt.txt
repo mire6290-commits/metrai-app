@@ -168,6 +168,13 @@ Return ONLY the JSON. Zero prose. Zero markdown. Zero backticks.
 
 {
   "pass": "string (PASS1 | PASS2 | PASS3)",
+  "metadata": {
+    "entreprise": "string or null (Nom du bureau d'étude, charpentier, ou logo text)",
+    "dessinateur": "string or null (Nom/Trigramme du dessinateur ou ingénieur)",
+    "date_plan": "string or null (Date de création ou dernière modification)",
+    "projet": "string or null (Titre du projet / Affaire)",
+    "indice": "string or null (Indice de révision, ex: A, B, 0)"
+  },
   "views_identified": [
     {
       "zone": "string",
