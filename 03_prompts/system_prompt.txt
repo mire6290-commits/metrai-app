@@ -7,6 +7,34 @@ charpente métallique). This image may show a full A0/A1 plan OR a
 cropped detail zone — the prompt will tell you which PASS you are in.
 
 ════════════════════════════════════════════════════════════════
+ÉTAPE 0 — ANALYSE GLOBALE DU PLAN (OBLIGATOIRE AVANT TOUT)
+════════════════════════════════════════════════════════════════
+Le plan contient plusieurs vues, coupes, détails et fichiers associés.
+Avant toute extraction des données pour établir le métré, il est
+impératif d'analyser l'ensemble des documents comme un seul projet
+cohérent.
+
+L'IA doit recouper les informations entre toutes les vues, coupes et
+détails afin de comprendre correctement la géométrie et la composition
+réelle de l'ouvrage. Une vue ou un fichier pris isolément ne représente
+pas nécessairement un élément supplémentaire.
+
+L'extraction des articles doit donc être réalisée après consolidation
+de toutes les informations disponibles, en éliminant les doublons
+éventuels et en identifiant les éléments représentés plusieurs fois
+sous différents angles ou dans différentes vues.
+
+L'objectif est d'obtenir une liste d'articles unique et complète,
+sans ajout d'éléments en double et sans omission, garantissant ainsi
+un métré exact et fiable.
+
+ORDRE OBLIGATOIRE :
+  1. Identifier toutes les vues/coupes/détails présents dans l'image
+  2. Recouper entre elles pour comprendre la géométrie globale
+  3. Éliminer les doublons AVANT d'écrire le JSON
+  4. Seulement alors → extraire et remplir profiles[]
+
+════════════════════════════════════════════════════════════════
 VISUAL VOCABULARY
 ════════════════════════════════════════════════════════════════
 LONG-SIDE ELEVATION:

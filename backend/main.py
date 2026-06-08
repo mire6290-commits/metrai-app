@@ -610,16 +610,28 @@ def _enrich_profile(p: Any) -> ProfileOut:
             attempts.add(f"L {a}*{a}*{e}")   # equal leg
             attempts.add(f"L{a}*{a}*{e}")
 
-        for attempt in attempts:
-            # 1. Direct match
-            v = CATALOGUE_PROFILS.get(attempt)
-            if v is not None:
-                return v
-            # 2. Normalised match (ignore spaces, X vs *)
-            norm = attempt.upper().replace(" ", "").replace("X", "*")
-            hit = _NORM_CATALOGUE.get(norm)
-            if hit:
-                return hit[1]
+        # ── Round bars: Ø14 / ø20 / D16 / RD16 / ROND 20 → "RD 14" ──────────
+        # Ø is NOT in [A-Z] so the space-insertion regex misses it — handle here
+        rd_m = re.match(
+            r'^(?:RD|ROND|R|D|[ØøΦφ∅])\s*(\d+(?:\.\d+)?)$',
+            s.replace(" ", "")
+        )
+        if rd_m:
+            d = rd_m.group(1)
+            attempts.add(f"RD {d}")
+            attempts.add(f"RD{d}")
+
+        # ── Extract embedded profile code from full designation ──────────────
+        # e.g. "CONTREVENTEMENT CVT L70*70*7" → try "L70*70*7" as last token
+        # e.g. "PANNE IPE140" → try "IPE140"
+        tokens = s.split()
+        for tok in reversed(tokens):
+            tok_clean = tok.replace("*", "").replace("X", "").replace(".", "")
+            if tok_clean != s.replace(" ", ""):  # avoid infinite loop
+                v = _lookup(tok)
+                if v is not None:
+                    return v
+
         return None
 
     # ─────────────────────────────────────────────────────────────────────
@@ -632,8 +644,9 @@ def _enrich_profile(p: Any) -> ProfileOut:
 
     # ── Cornière formula fallback ─────────────────────────────────────────
     if masse is None:
-        l_full = re.match(r'L\s*(\d+)[*Xx](\d+)[*Xx](\d+)', raw_designation)
-        l_short = re.match(r'L\s*(\d+)[*Xx](\d+)$', raw_designation.replace(" ", ""))
+        # Search for L profile pattern anywhere in the designation
+        l_full  = re.search(r'L\s*(\d+)[*Xx](\d+)[*Xx](\d+)', raw_designation)
+        l_short = re.search(r'(?<![A-Z])L\s*(\d+)[*Xx](\d+)(?![*Xx\d])', raw_designation)
         if l_full:
             a, b, e = map(float, l_full.groups())
             masse = round(((a + b - e) * e) * 0.00785, 3)
@@ -642,6 +655,17 @@ def _enrich_profile(p: Any) -> ProfileOut:
             a, e = map(float, l_short.groups())
             masse = round((2 * a - e) * e * 0.00785, 3)
             methode = "Calcul"
+
+    # ── JARRET (haunch) — assembled piece, estimate from base profile ─────
+    # JARRET has no linear length; weight ≈ 0.15 × base profile masse × qty
+    # The exact weight depends on the drawing detail — mark as estimated
+    if masse is None and 'JARRET' in raw_designation:
+        ipe_m = re.search(r'IPE\s*(\d+)', raw_designation)
+        if ipe_m:
+            base_masse = _lookup(f"IPE{ipe_m.group(1)}") or 0.0
+            # Jarret ≈ haunch plate + 2 stiffeners ≈ 15–25 kg typical
+            masse = round(base_masse * 0.20, 3)  # rough estimate per unit
+            methode = "Estimation"
 
     # Keep enriched designation for downstream (normalized with space)
     designation = re.sub(r'^([A-Z]+)(\d)', r'\1 \2', raw_designation)
