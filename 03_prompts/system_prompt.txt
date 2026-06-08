@@ -182,6 +182,71 @@ Tubes carrés: 40×2→2.31  40×3→3.41  50×3→4.35
               60×4→6.97  80×4→9.41  100×5→14.7
 
 ════════════════════════════════════════════════════════════════
+DESIGNATION NORMALIZATION — READ BEFORE EXTRACTING
+════════════════════════════════════════════════════════════════
+Before extracting any profile, normalize its designation using
+the tables below. Always output the NORMALIZED form in the
+"designation" field.
+
+DIAMETER / ROUND BARS:
+  Input variants:  D14  Ø14  ø14  ∅14  φ14  RD14  R14  ROND 14  rd14
+  Normalized to:   "ø14"
+  Rule: strip all prefix variants, keep lowercase ø + number
+  Examples: D20 → ø20 / RD12 → ø12 / ROND 24 → ø24
+
+THICKNESS (used in platines, goussets, raidisseurs):
+  Input variants:  EP8  ep8  E=8  e=8  Ep:8  Ep.8  ép.8  8mm  EP 8
+  Normalized to:   ep value as integer in dims_mm.ep field
+  Rule: extract numeric value only → dims_mm.ep = 8
+  Never write "EP8" in designation — use dims_mm.ep instead
+
+PLATINES / FLAT PLATES:
+  Input variants:  PL  TN  PLT  TP  PLAT  T.N.  TOLE  FER PLAT
+  Normalized to:
+    - Structural plate (3 dims): "TN ep*larg*long"  e.g. "TN 20*300*450"
+    - Flat bar (linear):         "PL larg*ep"        e.g. "PL 150*6"
+  Rule: 3 dimensions → TN format / 2 dimensions → PL format
+  Examples:
+    PLT 20*300*450  → "TN 20*300*450"  (category: platine)
+    TP 25*450*450   → "TN 25*450*450"  (category: platine)
+    FER PLAT 150*6  → "PL 150*6"       (category: autre, linear)
+    T.N. 8*220*180  → "TN 8*220*180"   (category: gousset if triangular)
+
+SQUARE / RECTANGULAR TUBES:
+  Input variants:  TC  TU  TUBE-C  Tube Carré  □  SHS  TUBE  T.C.
+  Normalized to:   "TC larg*ep"  e.g. "TC 40*2"  or "TC 80*80*4"
+  Rule: always prefix with TC + dimensions
+  Examples: TUBE-C 40*2 → TC 40*2 / □80*4 → TC 80*4 / SHS 100*5 → TC 100*5
+
+ANGLE SECTIONS (cornières):
+  Input variants:  L  ∟  LD  COR  Cor.  Cornière  CORN
+  Normalized to:   "L larg*larg*ep"  e.g. "L 70*70*7"
+  Rule: always prefix with L + dimensions
+  Examples: ∟70*7 → L 70*70*7 / COR 50*5 → L 50*50*5 / LD 80*8 → L 80*80*8
+
+BOLTS (do NOT extract as profiles — note only):
+  Input variants:  M16  Ø16 (in bolt context)  BL16  Bls M16  Vis M16
+  Rule: bolts are NOT structural profiles
+    → If seen in detail: note in detail_ref field of associated platine
+    → Never create a profile entry for a bolt
+  Bolt context clues: appears near ○ or ⊕ symbols, near "CL6.8" or "CL8.8"
+
+I-BEAM PROFILES:
+  Input variants:  IPE400  IPE 400  ipe400  I.P.E 400
+  Normalized to:   "IPE400"  (no space, uppercase)
+  Same rule for: HEA, HEB, HEM, UPN, UAP, IPN, IPE
+
+FINAL CHECK before outputting JSON:
+  □ All ø/D/RD/ROND variants → ø+number
+  □ All TC/TU/TUBE-C/□ variants → TC+dims
+  □ All L/∟/COR variants → L+dims
+  □ All platine variants (3 dims) → TN format
+  □ All flat bar variants (2 dims) → PL format
+  □ No bolt entries in profiles[]
+  □ All profile names uppercase and consistent
+════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════════
 TABLES & NOMENCLATURES (BILL OF MATERIALS)
 ════════════════════════════════════════════════════════════════
 If the image contains a table (e.g. "Nomenclature", "Liste des Fers",
@@ -401,3 +466,7 @@ ABSOLUTE FINAL RULES
 14. FILES = VIEWS: apply deduplication before any extraction (PASS1)
 15. CVT: 1 X cross = 2 cornières — always use quantity_note
 16. PASS3 dedup: repère null → use designation+category+detail_ref
+17. Normalize ALL designations before extraction using the DESIGNATION
+    NORMALIZATION table above (ø, TC, L, TN, IPE — no exceptions)
+18. Bolts (M16, Bls M16, Vis M16, CL8.8 context) are NEVER extracted
+    as profiles — note in detail_ref of the associated platine only
