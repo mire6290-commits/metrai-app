@@ -83,7 +83,7 @@ if uploaded_file is not None:
                 }
                 
                 try:
-                    response = requests.post("http://127.0.0.1:8000/extract", files=files, data=data, timeout=600)
+                    response = requests.post("http://127.0.0.1:8000/extract_async", files=files, data=data, timeout=600)
                     
                     if response.status_code == 200:
                         task_id = response.json().get('task_id')

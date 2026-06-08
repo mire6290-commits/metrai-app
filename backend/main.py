@@ -133,7 +133,7 @@ async def health():
     return {"status": "ok", "provider": os.getenv("VISION_PROVIDER", "claude")}
 
 
-@app.post("/extract", response_model=ExtractionResponse)
+@app.post("/extract")
 async def extract(
     file: UploadFile = File(..., description="PDF of the structural drawing"),
     project: str = Form(default="unknown", description="Project name"),

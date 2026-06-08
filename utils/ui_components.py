@@ -152,20 +152,25 @@ def get_wireframe_animation_html():
             /* Status cycle */
             .msg1, .msg2, .msg3, .msg4 {
                 position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 text-align: center;
                 opacity: 0;
             }
             
-            .msg1 { animation: showText1 10s infinite; }
-            .msg2 { animation: showText2 10s infinite; }
-            .msg3 { animation: showText3 10s infinite; }
-            .msg4 { animation: showText4 10s infinite; }
+            .msg1 { animation: showText 10s infinite 0s; }
+            .msg2 { animation: showText 10s infinite 2.5s; }
+            .msg3 { animation: showText 10s infinite 5.0s; }
+            .msg4 { animation: showText 10s infinite 7.5s; }
 
-            @keyframes showText1 { 0%{opacity:1;} 20%{opacity:1;} 25%{opacity:0;} 100%{opacity:0;} }
-            @keyframes showText2 { 0%{opacity:0;} 25%{opacity:1;} 45%{opacity:1;} 50%{opacity:0;} 100%{opacity:0;} }
-            @keyframes showText3 { 0%{opacity:0;} 50%{opacity:1;} 70%{opacity:1;} 75%{opacity:0;} 100%{opacity:0;} }
-            @keyframes showText4 { 0%{opacity:0;} 75%{opacity:1;} 95%{opacity:1;} 100%{opacity:0;} }
+            @keyframes showText { 
+                0% { opacity: 0; }
+                5% { opacity: 1; }
+                20% { opacity: 1; }
+                25% { opacity: 0; }
+                100% { opacity: 0; }
+            }
 
         </style>
     </head>
