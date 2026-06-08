@@ -71,7 +71,7 @@ if uploaded_file is not None:
             
             anim_placeholder = st.empty()
             with anim_placeholder:
-                components.html(get_wireframe_animation_html(), height=450)
+                components.html(get_wireframe_animation_html(), height=250)
             
             with st.spinner("Analyzing PDF with Agentic Zoning (this may take a few minutes for maximum precision)..."):
                 files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
