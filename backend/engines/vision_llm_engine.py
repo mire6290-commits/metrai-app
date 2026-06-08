@@ -106,19 +106,19 @@ class VisionLLMEngine:
         provider: VisionProvider | str | None = None,
         fallback: bool = True,
     ):
-        # Priority: explicit arg > env var > default (claude)
-        env_provider = os.getenv("VISION_PROVIDER", "claude").lower()
+        # Priority: explicit arg > env var > default (ollama)
+        env_provider = os.getenv("VISION_PROVIDER", "ollama").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
-        # Fallback chain: claude → gemini → openrouter
+        # Fallback chain based on what keys are available
         fallback_map = {
-            VisionProvider.CLAUDE:      VisionProvider.GEMINI,
+            VisionProvider.OLLAMA:      VisionProvider.OPENROUTER,
+            VisionProvider.OPENROUTER:  VisionProvider.GEMINI,
             VisionProvider.GEMINI:      VisionProvider.OPENROUTER,
-            VisionProvider.OPENROUTER:  VisionProvider.CLAUDE,
-            VisionProvider.OLLAMA:      VisionProvider.CLAUDE,
-            VisionProvider.OPENAI:      VisionProvider.CLAUDE,
+            VisionProvider.CLAUDE:      VisionProvider.OPENROUTER,
+            VisionProvider.OPENAI:      VisionProvider.OPENROUTER,
         }
-        self.fallback_provider = fallback_map.get(self.primary, VisionProvider.GEMINI)
+        self.fallback_provider = fallback_map.get(self.primary, VisionProvider.OPENROUTER)
         logger.info(f"VisionLLMEngine: primary={self.primary}, fallback={self.fallback_provider if fallback else 'disabled'}")
 
     def analyze(
