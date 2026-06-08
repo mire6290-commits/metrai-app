@@ -109,10 +109,7 @@ class VisionLLMEngine:
         env_provider = os.getenv("VISION_PROVIDER", "openrouter").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
-        self.fallback_provider = (
-            VisionProvider.GEMINI if self.primary == VisionProvider.OPENROUTER
-            else VisionProvider.GEMINI
-        )
+        self.fallback_provider = VisionProvider.OPENROUTER
         logger.info(f"VisionLLMEngine: primary={self.primary}, fallback={self.fallback_provider if fallback else 'disabled'}")
 
     def analyze(
@@ -237,7 +234,7 @@ class VisionLLMEngine:
         api_key = api_key.strip()  # Strip newlines or spaces to prevent header errors
         
         import requests
-        model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o")
+        model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash-preview:free")
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
