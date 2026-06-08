@@ -62,13 +62,15 @@ if uploaded_file is not None:
         if st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting):
             st.session_state.is_extracting = True
             
-            # Afficher l'animation Wireframe
             import sys
             import os
             sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
             from ui_components import get_wireframe_animation_html
             import streamlit.components.v1 as components
             
+            # Error placeholder ABOVE animation — always visible
+            error_placeholder = st.empty()
+
             anim_placeholder = st.empty()
             with anim_placeholder:
                 components.html(get_wireframe_animation_html(), height=250)
@@ -93,13 +95,18 @@ if uploaded_file is not None:
                     if response.status_code == 200:
                         st.session_state.extraction_result = response.json()
                         st.session_state.is_extracting = False
+                        anim_placeholder.empty()
                         st.rerun()
                     else:
-                        st.error(f"Error {response.status_code}: {response.text}")
+                        anim_placeholder.empty()
+                        detail = response.json().get("detail", response.text) if response.headers.get("content-type","").startswith("application/json") else response.text
+                        error_placeholder.error(f"❌ Erreur {response.status_code}:\n\n{detail}")
                         st.session_state.is_extracting = False
                 except Exception as e:
-                    st.error(f"Connection Error: Is the Backend running? Details: {str(e)}")
+                    anim_placeholder.empty()
+                    error_placeholder.error(f"❌ Connection Error: {str(e)}")
                     st.session_state.is_extracting = False
+
     if st.session_state.extraction_result is not None:
         result = st.session_state.extraction_result
         st.success(f"✅ Extraction Complete! Analyzed {result['pages_processed']} pages.")

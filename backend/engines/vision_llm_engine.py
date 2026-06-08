@@ -106,10 +106,19 @@ class VisionLLMEngine:
         provider: VisionProvider | str | None = None,
         fallback: bool = True,
     ):
-        env_provider = os.getenv("VISION_PROVIDER", "ollama").lower()
+        # Priority: explicit arg > env var > default (claude)
+        env_provider = os.getenv("VISION_PROVIDER", "claude").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
-        self.fallback_provider = VisionProvider.GEMINI
+        # Fallback chain: claude → gemini → openrouter
+        fallback_map = {
+            VisionProvider.CLAUDE:      VisionProvider.GEMINI,
+            VisionProvider.GEMINI:      VisionProvider.OPENROUTER,
+            VisionProvider.OPENROUTER:  VisionProvider.CLAUDE,
+            VisionProvider.OLLAMA:      VisionProvider.CLAUDE,
+            VisionProvider.OPENAI:      VisionProvider.CLAUDE,
+        }
+        self.fallback_provider = fallback_map.get(self.primary, VisionProvider.GEMINI)
         logger.info(f"VisionLLMEngine: primary={self.primary}, fallback={self.fallback_provider if fallback else 'disabled'}")
 
     def analyze(
@@ -279,7 +288,7 @@ class VisionLLMEngine:
             ]
         }
         logger.info(f"Sending request to Ollama API (model: {model})...")
-        resp = requests.post("https://ollama.com/api/chat", headers=headers, json=payload, timeout=15)
+        resp = requests.post("https://ollama.com/api/chat", headers=headers, json=payload, timeout=300)
         
         if not resp.ok:
             # Fallback to OpenAI compatible endpoint if api/chat fails
@@ -297,7 +306,7 @@ class VisionLLMEngine:
                         }
                     ]
                 }
-                resp = requests.post("https://api.ollama.com/v1/chat/completions", headers=headers, json=payload_openai, timeout=15)
+                resp = requests.post("https://api.ollama.com/v1/chat/completions", headers=headers, json=payload_openai, timeout=300)
                 if not resp.ok:
                     error_msg = f"Ollama API failed (both endpoints): {resp.status_code} - {resp.text}"
                     logger.error(error_msg)
