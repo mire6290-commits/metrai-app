@@ -227,9 +227,8 @@ class VisionLLMEngine:
         data = resp.json()
         try:
             return data["candidates"][0]["content"]["parts"][0]["text"]
-        except (KeyError, IndexError) as e:
-            raise ValueError(f"Unexpected Gemini response format: {data}")
-
+        except Exception as e:
+            raise ValueError(f"Unexpected Gemini response format: {data}") from e
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _call_openrouter(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENROUTER_API_KEY")

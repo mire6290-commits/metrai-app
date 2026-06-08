@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import time
 import pandas as pd
-import io
 import sys
 import os
 import threading
@@ -192,7 +191,7 @@ if uploaded_file is not None:
                             
                         ptot = p_unt * qty
                         edited_df.at[idx, 'poids_total_kg'] = round(ptot, 2)
-                except Exception as e:
+                except Exception:
                     pass
             
             st.markdown("### 📊 Récapitulatif Net")

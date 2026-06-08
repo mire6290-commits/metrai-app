@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-
+import re
 class RulesDB:
     def __init__(self):
         # Base de données simple des poids linéiques (kg/m) et surfaces de peinture (m²/m)

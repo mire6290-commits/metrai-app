@@ -2,7 +2,6 @@ import io
 import pandas as pd
 from typing import List, Dict, Any
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter
 
 # ReportLab imports for PDF generation
 from reportlab.lib.pagesizes import letter
@@ -153,7 +152,6 @@ class ExportEngine:
                 c_long.border = thin_border
                 
                 val_plin = item.get('masse_lineaire_kg_m', item.get('poids_lineique', 0))
-                c_plin = ws.cell(row=current_row, column=6, value=val_plin if val_plin else "----")
                 # Formula or static value for Poids Unit
                 val_punt_static = item.get('poids_unitaire')
                 if val_punt_static is not None and val_punt_static != "----":
@@ -200,7 +198,7 @@ class ExportEngine:
             if current_row - 1 > start_row:
                 ws.merge_cells(start_row=start_row, start_column=2, end_row=current_row-1, end_column=2)
 
-        last_data_row = current_row - 1
+        current_row - 1
 
         # Totaux
         current_row += 1
@@ -269,7 +267,6 @@ class ExportEngine:
         header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
         center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
         thick_border = Border(left=Side(style='medium'), right=Side(style='medium'), top=Side(style='medium'), bottom=Side(style='medium'))
         

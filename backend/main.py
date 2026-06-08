@@ -21,7 +21,7 @@ TASKS_STORE: Dict[str, dict] = {}
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -68,7 +68,6 @@ async def startup():
 
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
-import traceback
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -257,7 +256,7 @@ async def extract(
                 except Exception as e:
                     logger.error(f"PASS 3 Failed: {e}. Falling back to Python merge.")
                     # Fallback to Python merge if PASS 3 fails
-                    zone_results = [res1]
+                    [res1]
                     # We don't have the parsed pass2 objects here easily, so we just use res1
                     all_results.append(res1)
 
@@ -506,13 +505,14 @@ async def export_excel_advanced(req: ExportRequest):
 @app.get("/profiles/catalog")
 async def profile_catalog():
     """Return the EN profile table (masse linéaire kg/m) for reference."""
-    return {"profiles": _RULES_DB}
+    from catalogue import CATALOGUE_PROFILS
+    return {"profiles": CATALOGUE_PROFILS}
 
 
 # ---------------------------------------------------------------------------
 # RulesDB — Catalogue et Règles de calcul
 # ---------------------------------------------------------------------------
-from catalogue import CATALOGUE_PROFILS, CATALOGUE_BOULONNERIE, CATALOGUE_TOLES_KG_M2
+from catalogue import CATALOGUE_PROFILS, CATALOGUE_BOULONNERIE
 import re
 import math
 

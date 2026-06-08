@@ -6,9 +6,8 @@ Uses PyMuPDF (fitz) — faster and more accurate than pdf2image for technical dr
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Generator
 
 import fitz  # PyMuPDF
 from PIL import Image

@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Any
 from pathlib import Path
-from pydantic import BaseModel, ValidationError
 
 # We keep the same data schema
 from engines.vision_llm_engine import DetectedProfile, VisionResult
