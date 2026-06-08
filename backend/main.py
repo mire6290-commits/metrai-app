@@ -629,14 +629,14 @@ def _enrich_profile(p: Any) -> ProfileOut:
 
         # ── Extract embedded profile code from full designation ──────────────
         # e.g. "CONTREVENTEMENT CVT L70*70*7" → try "L70*70*7" as last token
-        # e.g. "PANNE IPE140" → try "IPE140"
+        # GUARD: only recurse if tok is different from s (avoids infinite recursion)
         tokens = s.split()
-        for tok in reversed(tokens):
-            tok_clean = tok.replace("*", "").replace("X", "").replace(".", "")
-            if tok_clean != s.replace(" ", ""):  # avoid infinite loop
-                v = _lookup(tok)
-                if v is not None:
-                    return v
+        if len(tokens) > 1:
+            for tok in reversed(tokens):
+                if tok != s and len(tok) >= 2:
+                    v = _lookup(tok)
+                    if v is not None:
+                        return v
 
         return None
 
