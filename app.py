@@ -83,32 +83,17 @@ if uploaded_file is not None:
                 }
                 
                 try:
-                    response = requests.post("http://127.0.0.1:8000/extract_async", files=files, data=data, timeout=600)
+                    response = requests.post(
+                        "http://127.0.0.1:8000/extract",
+                        files=files,
+                        data=data,
+                        timeout=600
+                    )
                     
                     if response.status_code == 200:
-                        task_id = response.json().get('task_id')
-                        if task_id:
-                            # Poll status
-                            while True:
-                                status_res = requests.get(f"http://127.0.0.1:8000/extract_status/{task_id}")
-                                if status_res.status_code == 200:
-                                    status_data = status_res.json()
-                                    if status_data.get('status') == 'done':
-                                        st.session_state.extraction_result = status_data['result']
-                                        st.session_state.is_extracting = False
-                                        st.rerun()
-                                    elif status_data.get('status') == 'error':
-                                        st.error(f"Extraction failed: {status_data.get('detail')}")
-                                        st.session_state.is_extracting = False
-                                        break
-                                else:
-                                    st.error(f"Error checking status: {status_res.status_code}")
-                                    st.session_state.is_extracting = False
-                                    break
-                                time.sleep(2)
-                        else:
-                            st.error("No task ID returned from backend.")
-                            st.session_state.is_extracting = False
+                        st.session_state.extraction_result = response.json()
+                        st.session_state.is_extracting = False
+                        st.rerun()
                     else:
                         st.error(f"Error {response.status_code}: {response.text}")
                         st.session_state.is_extracting = False

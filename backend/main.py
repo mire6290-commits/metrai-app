@@ -408,18 +408,57 @@ async def extract_async(
                         page_images = [p for p in page_images if p.page_number in requested]
 
                     for page_img in page_images:
-                        logger.info(f"Single full-page analysis for page {page_img.page_number}...")
-                        ctx = context.copy()
-                        ctx["zone_type"] = "full_page"
-                        # Single call — Gemini/Claude can read full A0 plan in one shot
-                        # (5-zone tiling was burning 5× the API quota)
-                        res = _vision.analyze(
-                            page_img.image,
-                            page_number=page_img.page_number,
-                            tile_index=None,
-                            context=ctx
-                        )
-                        all_results.append(res)
+                        logger.info(f"Applying mathematical grid tiling for page {page_img.page_number}...")
+                        zones = [
+                            {"zone_type": "full_page", "bbox_normalized": [0.0, 0.0, 1.0, 1.0]},
+                            {"zone_type": "quadrant_top_left", "bbox_normalized": [0.0, 0.0, 0.55, 0.55]},
+                            {"zone_type": "quadrant_top_right", "bbox_normalized": [0.0, 0.45, 0.55, 1.0]},
+                            {"zone_type": "quadrant_bottom_left", "bbox_normalized": [0.45, 0.0, 1.0, 0.55]},
+                            {"zone_type": "quadrant_bottom_right", "bbox_normalized": [0.45, 0.45, 1.0, 1.0]},
+                        ]
+                        
+                        zone_results = []
+                        img_w, img_h = page_img.image.size
+                        
+                        for z_idx, zone in enumerate(zones):
+                            zt = zone.get("zone_type", "unknown")
+                            bbox = zone.get("bbox_normalized", [0.0, 0.0, 1.0, 1.0])
+                            if not isinstance(bbox, list) or len(bbox) != 4:
+                                bbox = [0.0, 0.0, 1.0, 1.0]
+                            
+                            y_min, x_min, y_max, x_max = bbox
+                            
+                            # Defensive check against hallucinated coordinates
+                            left = min(x_min, x_max) * img_w
+                            right = max(x_min, x_max) * img_w
+                            top = min(y_min, y_max) * img_h
+                            bottom = max(y_min, y_max) * img_h
+                            
+                            box_px = (
+                                int(left),
+                                int(top),
+                                int(right),
+                                int(bottom)
+                            )
+                            padding_x = int(img_w * 0.05)
+                            padding_y = int(img_h * 0.05)
+                            box_px = (
+                                max(0, box_px[0] - padding_x),
+                                max(0, box_px[1] - padding_y),
+                                min(img_w, box_px[2] + padding_x),
+                                min(img_h, box_px[3] + padding_y)
+                            )
+                            
+                            crop_img = page_img.image.crop(box_px)
+                            ctx = context.copy()
+                            ctx["zone_type"] = zt
+                            
+                            res = _vision.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx, context=ctx)
+                            zone_results.append(res)
+    
+                        if zone_results:
+                            merged = merge_tile_results(zone_results)
+                            all_results.append(merged)
     
                     if not all_results:
                         TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
@@ -472,13 +511,7 @@ async def extract_async(
             logger.error(f"Task {task_id} failed: {e}")
             TASKS_STORE[task_id] = {"status": "error", "detail": traceback.format_exc()}
 
-    def _run_task_in_thread():
-        import asyncio as _aio
-        _aio.run(process_task())
-
-    import threading as _threading
-    t = _threading.Thread(target=_run_task_in_thread, daemon=True)
-    t.start()
+    asyncio.create_task(process_task())
     return {'task_id': task_id}
 
 @app.get('/extract_status/{task_id}')
@@ -544,8 +577,10 @@ def _enrich_profile(p: Any) -> ProfileOut:
         norm = k.upper().replace(" ", "").replace("X", "*")
         _NORM_CATALOGUE[norm] = (k, v)
 
-    def _lookup(raw: str) -> float | None:
+    def _lookup(raw: str, _depth: int = 0) -> float | None:
         """Try every reasonable variant of a designation against the catalogue."""
+        if _depth > 1:
+            return None  # Guard against infinite recursion
         attempts = set()
         s = raw.upper().strip()
 
@@ -577,27 +612,26 @@ def _enrich_profile(p: Any) -> ProfileOut:
             attempts.add(f"L {a}*{a}*{e}")   # equal leg
             attempts.add(f"L{a}*{a}*{e}")
 
-        # ── Round bars: Ø14 / ø20 / D16 / RD16 / ROND 20 → "RD 14" ──────────
-        # Ø is NOT in [A-Z] so the space-insertion regex misses it — handle here
-        rd_m = re.match(
-            r'^(?:RD|ROND|R|D|[ØøΦφ∅])\s*(\d+(?:\.\d+)?)$',
-            s.replace(" ", "")
-        )
-        if rd_m:
-            d = rd_m.group(1)
-            attempts.add(f"RD {d}")
-            attempts.add(f"RD{d}")
+        for attempt in attempts:
+            # 1. Direct match
+            v = CATALOGUE_PROFILS.get(attempt)
+            if v is not None:
+                return v
+            # 2. Normalised match (ignore spaces, X vs *)
+            norm = attempt.upper().replace(" ", "").replace("X", "*")
+            hit = _NORM_CATALOGUE.get(norm)
+            if hit:
+                return hit[1]
 
         # ── Extract embedded profile code from full designation ──────────────
         # e.g. "CONTREVENTEMENT CVT L70*70*7" → try "L70*70*7" as last token
-        # GUARD: only recurse if tok is different from s (avoids infinite recursion)
+        # e.g. "PANNE IPE140" → try "IPE140"
         tokens = s.split()
-        if len(tokens) > 1:
+        if len(tokens) > 1:  # Only if there are multiple tokens
             for tok in reversed(tokens):
-                if tok != s and len(tok) >= 2:
-                    v = _lookup(tok)
-                    if v is not None:
-                        return v
+                v = _lookup(tok, _depth=_depth + 1)
+                if v is not None:
+                    return v
 
         return None
 
@@ -624,15 +658,23 @@ def _enrich_profile(p: Any) -> ProfileOut:
             methode = "Calcul"
 
     # ── JARRET (haunch) — assembled piece, estimate from base profile ─────
-    # JARRET has no linear length; weight ≈ 0.15 × base profile masse × qty
-    # The exact weight depends on the drawing detail — mark as estimated
-    if masse is None and 'JARRET' in raw_designation:
+    # JARRET has no linear length — compute poids directly from base IPE masse
+    if 'JARRET' in raw_designation:
         ipe_m = re.search(r'IPE\s*(\d+)', raw_designation)
         if ipe_m:
             base_masse = _lookup(f"IPE{ipe_m.group(1)}") or 0.0
-            # Jarret ≈ haunch plate + 2 stiffeners ≈ 15–25 kg typical
-            masse = round(base_masse * 0.20, 3)  # rough estimate per unit
+            # Jarret ≈ haunch plate + 2 stiffeners, roughly 20% of beam linear mass
+            # Set as fixed poids per unit (not linear × length)
+            poids_jarret = round(base_masse * 0.20, 3)
             methode = "Estimation"
+            masse = None
+            length_val = None  # No linear length for a haunch
+            # Will be handled below — store for later override
+            _jarret_poids_unitaire = poids_jarret
+        else:
+            _jarret_poids_unitaire = None
+    else:
+        _jarret_poids_unitaire = None
 
     # Keep enriched designation for downstream (normalized with space)
     designation = re.sub(r'^([A-Z]+)(\d)', r'\1 \2', raw_designation)
@@ -714,16 +756,29 @@ def _enrich_profile(p: Any) -> ProfileOut:
     # TÔLES PLQ / TL
     tole_match = re.search(r'(?:PLQ|TL|TOLE).*?(\d+)\s*[xX\*]\s*(\d+)\s*[xX\*]\s*(\d+)', designation, re.IGNORECASE)
     if tole_match and not methode:
-        long_plq, larg_plq, ep_plq = map(float, tole_match.groups())
-        poids_unitaire = round((long_plq/1000) * (larg_plq/1000) * ep_plq * 7.85, 2)
+        vals = sorted([float(tole_match.group(1)), float(tole_match.group(2)), float(tole_match.group(3))])
+        ep_plq, larg_plq, long_plq = vals[0], vals[1], vals[2]  # ep = min toujours
+        poids_unitaire = round((long_plq/1000) * (larg_plq/1000) * (ep_plq/1000) * 7850, 2)
         poids = round(poids_unitaire * qty_val, 2)
         methode = "Calcul"
         masse = None
         length_val = None
 
     if masse is not None and not boulon_match and not tole_match:
-        poids = round(masse * length_val * qty_val, 2)
-        
+        if length_val is not None and length_val > 0:
+            poids = round(masse * length_val * qty_val, 2)
+        else:
+            poids = None  # No length → no weight computable
+
+    # JARRET override: poids direct (no length)
+    if _jarret_poids_unitaire is not None:
+        poids_unitaire = _jarret_poids_unitaire
+        poids = round(_jarret_poids_unitaire * qty_val, 2)
+        methode = "Estimation"
+        masse = None
+        length_val = None
+
+
     # Check for PL, TN, PLATINE, GOUSSET, RAIDISSEUR A*B*C
     pl_match = re.search(r'(?:PLT|TN|PLAT|GOUSSET|RAID).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
     fer_plat_match = re.search(r'(?:FER\s*PLAT|PL).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
