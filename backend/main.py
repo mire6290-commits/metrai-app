@@ -511,7 +511,13 @@ async def extract_async(
             logger.error(f"Task {task_id} failed: {e}")
             TASKS_STORE[task_id] = {"status": "error", "detail": traceback.format_exc()}
 
-    asyncio.create_task(process_task())
+    def _run_task_in_thread():
+        import asyncio as _aio
+        _aio.run(process_task())
+
+    import threading as _threading
+    t = _threading.Thread(target=_run_task_in_thread, daemon=True)
+    t.start()
     return {'task_id': task_id}
 
 @app.get('/extract_status/{task_id}')
