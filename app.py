@@ -41,6 +41,11 @@ with st.sidebar:
     pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
     mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
     
+    if st.button("🔄 Reset App State", help="Click this if the extraction button gets stuck."):
+        st.session_state.extraction_result = None
+        st.session_state.is_extracting = False
+        st.rerun()
+
 uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'])
 
 if 'extraction_result' not in st.session_state:
@@ -81,16 +86,35 @@ if uploaded_file is not None:
                     response = requests.post("http://127.0.0.1:8000/extract", files=files, data=data, timeout=600)
                     
                     if response.status_code == 200:
-                        st.session_state.extraction_result = response.json()
-                        st.session_state.is_extracting = False
-                        st.rerun()
+                        task_id = response.json().get('task_id')
+                        if task_id:
+                            # Poll status
+                            while True:
+                                status_res = requests.get(f"http://127.0.0.1:8000/extract_status/{task_id}")
+                                if status_res.status_code == 200:
+                                    status_data = status_res.json()
+                                    if status_data.get('status') == 'done':
+                                        st.session_state.extraction_result = status_data['result']
+                                        st.session_state.is_extracting = False
+                                        st.rerun()
+                                    elif status_data.get('status') == 'error':
+                                        st.error(f"Extraction failed: {status_data.get('detail')}")
+                                        st.session_state.is_extracting = False
+                                        break
+                                else:
+                                    st.error(f"Error checking status: {status_res.status_code}")
+                                    st.session_state.is_extracting = False
+                                    break
+                                time.sleep(2)
+                        else:
+                            st.error("No task ID returned from backend.")
+                            st.session_state.is_extracting = False
                     else:
                         st.error(f"Error {response.status_code}: {response.text}")
                         st.session_state.is_extracting = False
                 except Exception as e:
                     st.error(f"Connection Error: Is the Backend running? Details: {str(e)}")
                     st.session_state.is_extracting = False
-
     if st.session_state.extraction_result is not None:
         result = st.session_state.extraction_result
         st.success(f"✅ Extraction Complete! Analyzed {result['pages_processed']} pages.")
