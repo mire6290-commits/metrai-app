@@ -458,6 +458,7 @@ def merge_tile_results(results: list[VisionResult]) -> VisionResult:
     return VisionResult(
         scale_detected=best_scale.scale_detected,
         scale_confidence=best_scale.scale_confidence,
+        metadata=results[0].metadata if results else {},
         profiles=all_profiles,
         unreadable_zones=list(set(all_unreadable)),
         warnings=list(set(all_warnings)),
