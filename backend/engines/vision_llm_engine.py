@@ -279,7 +279,7 @@ class VisionLLMEngine:
             ]
         }
         logger.info(f"Sending request to Ollama API (model: {model})...")
-        resp = requests.post("https://ollama.com/api/chat", headers=headers, json=payload, timeout=300)
+        resp = requests.post("https://ollama.com/api/chat", headers=headers, json=payload, timeout=15)
         
         if not resp.ok:
             # Fallback to OpenAI compatible endpoint if api/chat fails
@@ -297,7 +297,7 @@ class VisionLLMEngine:
                         }
                     ]
                 }
-                resp = requests.post("https://api.ollama.com/v1/chat/completions", headers=headers, json=payload_openai, timeout=300)
+                resp = requests.post("https://api.ollama.com/v1/chat/completions", headers=headers, json=payload_openai, timeout=15)
                 if not resp.ok:
                     error_msg = f"Ollama API failed (both endpoints): {resp.status_code} - {resp.text}"
                     logger.error(error_msg)
