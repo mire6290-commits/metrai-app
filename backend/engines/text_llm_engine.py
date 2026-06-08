@@ -79,16 +79,21 @@ class TextLLMEngine:
                 try:
                     # DetectedProfile is a dataclass, so we pass kwargs
                     profiles.append(DetectedProfile(
-                        id=p.get("repere") or p.get("id", "P000"),
-                        type=p.get("category", p.get("type", "unknown")),
+                        repere=p.get("repere") or p.get("id", "P000"),
+                        category=p.get("category", p.get("type", "unknown")),
                         designation=p.get("designation", ""),
                         role=p.get("role", ""),
                         length_m=p.get("length_m"),
-                        quantity=int(p.get("quantity") or 1),
-                        zone=", ".join(p.get("views_confirmed") or []) if "views_confirmed" in p else (p.get("zone") or ""),
-                        confidence=float(p.get("confidence", 0.8)),
                         length_source=p.get("length_source", ""),
+                        dims_mm=p.get("dims_mm"),
+                        quantity=int(p.get("quantity") or 1),
                         quantity_note=p.get("quantity_note", ""),
+                        poids_lineaire_kg_m=p.get("poids_lineaire_kg_m"),
+                        poids_total_kg=p.get("poids_total_kg"),
+                        views_confirmed=p.get("views_confirmed", []),
+                        detail_ref=p.get("detail_ref"),
+                        notes=p.get("notes"),
+                        confidence=float(p.get("confidence", 0.8)),
                         bbox_normalized=p.get("bbox_normalized", [])
                     ))
                 except Exception as e:

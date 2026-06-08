@@ -30,9 +30,8 @@ def get_wireframe_animation_html():
 
             .svg-container {
                 width: 600px;
-                height: 250px;
+                height: 400px;
                 position: relative;
-                margin-top: 20px;
             }
 
             .draw-path {
@@ -47,66 +46,48 @@ def get_wireframe_animation_html():
             }
 
             /* Animation Phases */
+            /* Poteaux (Columns) */
             .poteau {
-                animation: drawPoteau 8s infinite;
+                animation: draw 1.5s ease-in-out forwards;
             }
+            /* Traverses (Rafters) */
             .traverse {
-                animation: drawTraverse 8s infinite;
+                animation: draw 1.5s ease-in-out forwards;
+                animation-delay: 1.5s;
             }
+            /* Pannes / Lisses (Connecting elements) */
             .panne {
                 stroke-width: 1.5;
-                animation: drawPanne 8s infinite;
+                animation: draw 2s ease-in-out forwards;
+                animation-delay: 3s;
             }
+            /* Diagonales (Bracing) */
             .diagonale {
                 stroke-width: 1;
+                stroke-dasharray: 10, 5;
+                animation: draw-dashed 2s ease-in-out forwards;
+                animation-delay: 4.5s;
                 opacity: 0.7;
-                animation: drawDiagonale 8s infinite;
             }
 
-            @keyframes drawPoteau {
-                0% { stroke-dashoffset: 1000; opacity: 1; }
-                15% { stroke-dashoffset: 0; opacity: 1; }
-                85% { stroke-dashoffset: 0; opacity: 1; }
-                95% { stroke-dashoffset: 0; opacity: 0; }
-                100% { stroke-dashoffset: 1000; opacity: 0; }
+            @keyframes draw {
+                to { stroke-dashoffset: 0; }
             }
             
-            @keyframes drawTraverse {
-                0% { stroke-dashoffset: 1000; opacity: 1; }
-                15% { stroke-dashoffset: 1000; opacity: 1; }
-                30% { stroke-dashoffset: 0; opacity: 1; }
-                85% { stroke-dashoffset: 0; opacity: 1; }
-                95% { stroke-dashoffset: 0; opacity: 0; }
-                100% { stroke-dashoffset: 1000; opacity: 0; }
-            }
-            
-            @keyframes drawPanne {
-                0% { stroke-dashoffset: 1000; opacity: 1; }
-                30% { stroke-dashoffset: 1000; opacity: 1; }
-                45% { stroke-dashoffset: 0; opacity: 1; }
-                85% { stroke-dashoffset: 0; opacity: 1; }
-                95% { stroke-dashoffset: 0; opacity: 0; }
-                100% { stroke-dashoffset: 1000; opacity: 0; }
-            }
-            
-            @keyframes drawDiagonale {
-                0% { stroke-dashoffset: 1000; opacity: 0.7; }
-                45% { stroke-dashoffset: 1000; opacity: 0.7; }
-                60% { stroke-dashoffset: 0; opacity: 0.7; }
-                85% { stroke-dashoffset: 0; opacity: 0.7; }
-                95% { stroke-dashoffset: 0; opacity: 0; }
-                100% { stroke-dashoffset: 1000; opacity: 0; }
+            @keyframes draw-dashed {
+                from { stroke-dashoffset: 1000; }
+                to { stroke-dashoffset: 0; }
             }
 
             /* Blinking Status Text */
             .status-container {
-                margin-top: 10px;
+                margin-top: 20px;
                 text-align: center;
             }
 
             .status-text {
                 color: #FFA500;
-                font-size: 1.1rem;
+                font-size: 1.2rem;
                 font-weight: bold;
                 text-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
                 opacity: 0;
@@ -115,8 +96,8 @@ def get_wireframe_animation_html():
             
             .status-subtext {
                 color: #A06500;
-                font-size: 0.85rem;
-                margin-top: 3px;
+                font-size: 0.9rem;
+                margin-top: 5px;
                 opacity: 0;
                 animation: fadeIn 1s forwards;
                 animation-delay: 1s;
@@ -140,17 +121,15 @@ def get_wireframe_animation_html():
                 opacity: 0;
             }
             
-            /* Loops over the 8s cycle */
-            .msg1 { animation: showText 8s infinite; }
-            .msg2 { animation: showText 8s infinite; animation-delay: 2s; }
-            .msg3 { animation: showText 8s infinite; animation-delay: 4s; }
-            .msg4 { animation: showText 8s infinite; animation-delay: 6s; }
+            .msg1 { animation: showText 3s forwards; }
+            .msg2 { animation: showText 4s forwards; animation-delay: 3s; }
+            .msg3 { animation: showText 5s forwards; animation-delay: 7s; }
+            .msg4 { animation: showText 10s forwards; animation-delay: 12s; }
 
             @keyframes showText {
                 0% { opacity: 0; }
-                5% { opacity: 1; }
-                20% { opacity: 1; }
-                25% { opacity: 0; }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
                 100% { opacity: 0; }
             }
 

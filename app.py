@@ -34,35 +34,30 @@ st.set_page_config(page_title="Métré Automatisé 🏗️", layout="wide", page
 st.title("🏗️ Métré Automatisé - Charpente Métallique")
 st.markdown("Extract structural steel profiles from your drawings with 100% precision using Agentic Zoning.")
 
+# Sidebar Configuration
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    project_name = st.text_input("Project Name", value="Mon Projet")
+    scale_hint = st.text_input("Scale Hint (Optional)", value="1:50")
+    pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
+    mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
+    
+uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'])
+
 if 'extraction_result' not in st.session_state:
     st.session_state.extraction_result = None
 if 'is_extracting' not in st.session_state:
     st.session_state.is_extracting = False
 
-# Sidebar Configuration
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    project_name = st.text_input("Project Name", value="Mon Projet", disabled=st.session_state.is_extracting)
-    scale_hint = st.text_input("Scale Hint (Optional)", value="1:50", disabled=st.session_state.is_extracting)
-    pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'", disabled=st.session_state.is_extracting)
-    mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"], disabled=st.session_state.is_extracting)
-    
-uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'], disabled=st.session_state.is_extracting)
-
 def reset_state():
     st.session_state.extraction_result = None
     st.session_state.is_extracting = False
 
-def set_extracting():
-    st.session_state.is_extracting = True
-    st.session_state.extraction_result = None
-    st.session_state.extraction_error = None
-
 if uploaded_file is not None:
     if st.session_state.extraction_result is None:
-        st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting, on_click=set_extracting)
-        
-        if st.session_state.is_extracting:
+        if st.button("🚀 Start Extraction", type="primary", disabled=st.session_state.is_extracting):
+            st.session_state.is_extracting = True
+            
             # Afficher l'animation Wireframe
             import sys
             import os
@@ -72,7 +67,7 @@ if uploaded_file is not None:
             
             anim_placeholder = st.empty()
             with anim_placeholder:
-                components.html(get_wireframe_animation_html(), height=300)
+                components.html(get_wireframe_animation_html(), height=450)
             
             with st.spinner("Analyzing PDF with Agentic Zoning (this may take a few minutes for maximum precision)..."):
                 files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
@@ -89,19 +84,13 @@ if uploaded_file is not None:
                     if response.status_code == 200:
                         st.session_state.extraction_result = response.json()
                         st.session_state.is_extracting = False
-                        st.session_state.extraction_error = None
                         st.rerun()
                     else:
-                        st.session_state.extraction_error = f"Error {response.status_code}: {response.text}"
+                        st.error(f"Error {response.status_code}: {response.text}")
                         st.session_state.is_extracting = False
-                        st.rerun()
                 except Exception as e:
-                    st.session_state.extraction_error = f"Connection Error: Is the Backend running? Details: {str(e)}"
+                    st.error(f"Connection Error: Is the Backend running? Details: {str(e)}")
                     st.session_state.is_extracting = False
-                    st.rerun()
-
-    if "extraction_error" in st.session_state and st.session_state.extraction_error:
-        st.error(st.session_state.extraction_error)
 
     if st.session_state.extraction_result is not None:
         result = st.session_state.extraction_result

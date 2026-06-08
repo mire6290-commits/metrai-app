@@ -286,32 +286,8 @@ async def extract(
                 drawing_type = r.drawing_type
             provider_used = r.provider_used
 
-        # Cross-page deduplication by explicit Repère
-        deduped_profiles_raw = []
-        seen_reperes = {}
-        for p in all_profiles_raw:
-            rep = (p.id or "").strip().upper()
-            # P000 or unknown are placeholders from LLM, don't dedup them purely by repere
-            if rep and rep not in ["", "P000", "UNKNOWN", "NONE", "N/A"]:
-                if rep in seen_reperes:
-                    existing = seen_reperes[rep]
-                    # Combine zones as strings
-                    existing_zone_str = existing.zone if existing.zone else ""
-                    new_zone_str = p.zone if p.zone else ""
-                    existing_zones = set([z.strip() for z in existing_zone_str.split(",") if z.strip()])
-                    new_zones = set([z.strip() for z in new_zone_str.split(",") if z.strip()])
-                    existing.zone = ", ".join(sorted(existing_zones.union(new_zones)))
-                    # Take the max quantity in case different pages saw partial quantities or one saw the total multiplier
-                    existing.quantity = max(existing.quantity, p.quantity)
-                else:
-                    seen_reperes[rep] = p
-                    deduped_profiles_raw.append(p)
-            else:
-                # Without a strict repère, we rely on the LLM's per-page PASS3 deduplication
-                deduped_profiles_raw.append(p)
-
         # Enrich with RulesDB (masse linéaire from EN tables)
-        profiles_out = [_enrich_profile(p) for p in deduped_profiles_raw]
+        profiles_out = [_enrich_profile(p) for p in all_profiles_raw]
 
         total_weight = sum(
             p.poids_total_kg for p in profiles_out if p.poids_total_kg is not None
