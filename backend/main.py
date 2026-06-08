@@ -568,46 +568,84 @@ import math
 
 def _enrich_profile(p: Any) -> ProfileOut:
     """Look up masse linéaire and compute poids total from RulesDB."""
-    designation = p.designation.upper().strip()
-    designation = designation.replace("CORNIÈRE", "").replace("CORNIERE", "").replace("RONDELLE", "RON").replace("ECROU", "ECR").strip()
-    
-    # Format "IPE400" to "IPE 400" to match RulesDB
-    designation = re.sub(r'^([A-Z]+)(\d+)', r'\1 \2', designation)
-    
-    # Fix 'X' or 'x' instead of '*' in L or 2L profiles (e.g. "L 60X6" -> "L 60*6")
-    designation = re.sub(r'(L|2L)\s*(\d+)\s*[X]\s*(\d+)', r'\1 \2*\3', designation)
-    
-    masse = CATALOGUE_PROFILS.get(designation)
-    methode = "Catalogue" if masse is not None else None
-    
-    # Fallback to check if it's L A*A*T
-    if not masse and designation.startswith('L '):
-        masse = CATALOGUE_PROFILS.get(designation.replace(' ', ''))
-        if masse:
-            methode = "Catalogue"
-        else:
-            # handle L 60*6
-            l_match = re.match(r'L\s*(\d+)\*(\d+)', designation)
-            if l_match:
-                masse = CATALOGUE_PROFILS.get(f"L {l_match.group(1)}*{l_match.group(1)}*{l_match.group(2)}")
-                if masse:
-                    methode = "Catalogue"
-                else:
-                    # Calcul Cornière
-                    a = float(l_match.group(1))
-                    e = float(l_match.group(2))
-                    masse = round((2 * a - e) * e * 0.00785, 2)
-                    methode = "Calcul"
-            
-            # handle L 80*40*6
-            l_ineg_match = re.match(r'L\s*(\d+)\*(\d+)\*(\d+)', designation)
-            if l_ineg_match and not methode:
-                a, b, e = map(float, l_ineg_match.groups())
-                if a == b:
-                    masse = round((2 * a - e) * e * 0.00785, 2)
-                else:
-                    masse = round((a + b - e) * e * 0.00785, 2)
-                methode = "Calcul"
+
+    # ── Build a normalized catalogue index once ───────────────────────────
+    # Key: stripped of spaces, uppercase, * separator
+    # Value: (original_key, masse_kg_m)
+    _NORM_CATALOGUE: dict[str, tuple[str, float]] = {}
+    for k, v in CATALOGUE_PROFILS.items():
+        norm = k.upper().replace(" ", "").replace("X", "*")
+        _NORM_CATALOGUE[norm] = (k, v)
+
+    def _lookup(raw: str) -> float | None:
+        """Try every reasonable variant of a designation against the catalogue."""
+        attempts = set()
+        s = raw.upper().strip()
+
+        # Direct
+        attempts.add(s)
+        attempts.add(s.replace(" ", ""))
+
+        # Normalise separators → *
+        s_star = re.sub(r'[\sXx]+', '*', s)
+        s_star = re.sub(r'\*+', '*', s_star).strip('*')
+        attempts.add(s_star)
+        attempts.add(s_star.replace("*", " ").strip())
+
+        # Add space after leading letters (IPE400 → IPE 400, L50 → L 50)
+        s_spaced = re.sub(r'^([A-Z]+)(\d)', r'\1 \2', s)
+        attempts.add(s_spaced)
+        attempts.add(s_spaced.replace(" ", ""))
+
+        # L profiles: L50*50*5 → L 50*50*5  and  L50*5 → L 50*50*5
+        l_full = re.match(r'L\s*(\d+)\*(\d+)\*(\d+)$', s.replace(" ", ""))
+        if l_full:
+            a, b, e = l_full.groups()
+            attempts.add(f"L {a}*{b}*{e}")
+            attempts.add(f"L{a}*{b}*{e}")
+
+        l_short = re.match(r'L\s*(\d+)\*(\d+)$', s.replace(" ", ""))
+        if l_short:
+            a, e = l_short.groups()
+            attempts.add(f"L {a}*{a}*{e}")   # equal leg
+            attempts.add(f"L{a}*{a}*{e}")
+
+        for attempt in attempts:
+            # 1. Direct match
+            v = CATALOGUE_PROFILS.get(attempt)
+            if v is not None:
+                return v
+            # 2. Normalised match (ignore spaces, X vs *)
+            norm = attempt.upper().replace(" ", "").replace("X", "*")
+            hit = _NORM_CATALOGUE.get(norm)
+            if hit:
+                return hit[1]
+        return None
+
+    # ─────────────────────────────────────────────────────────────────────
+    raw_designation = p.designation.upper().strip()
+    # Strip noise words
+    raw_designation = raw_designation.replace("CORNIÈRE", "").replace("CORNIERE", "").strip()
+
+    masse    = _lookup(raw_designation)
+    methode  = "Catalogue" if masse is not None else None
+
+    # ── Cornière formula fallback ─────────────────────────────────────────
+    if masse is None:
+        l_full = re.match(r'L\s*(\d+)[*Xx](\d+)[*Xx](\d+)', raw_designation)
+        l_short = re.match(r'L\s*(\d+)[*Xx](\d+)$', raw_designation.replace(" ", ""))
+        if l_full:
+            a, b, e = map(float, l_full.groups())
+            masse = round(((a + b - e) * e) * 0.00785, 3)
+            methode = "Calcul"
+        elif l_short:
+            a, e = map(float, l_short.groups())
+            masse = round((2 * a - e) * e * 0.00785, 3)
+            methode = "Calcul"
+
+    # Keep enriched designation for downstream (normalized with space)
+    designation = re.sub(r'^([A-Z]+)(\d)', r'\1 \2', raw_designation)
+
 
     # RONDS PLEINS (RD)
     d_match = re.search(r'(?:RD|R|ROND|⌀)\s*(\d+)', designation, re.IGNORECASE)
