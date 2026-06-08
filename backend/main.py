@@ -28,9 +28,53 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 from engines.pdf_parser import PDFParser
-from engines.vision_llm_engine import VisionLLMEngine, VisionResult, merge_tile_results
+from engines.vision_llm_engine import VisionLLMEngine, VisionResult, merge_tile_results, DetectedProfile
 from engines.llamaparse_engine import LlamaParseEngine
 from engines.text_llm_engine import TextLLMEngine
+
+
+# ---------------------------------------------------------------------------
+# FILES = VIEWS — Python-level deduplication (safety net over LLM PASS 3)
+# ---------------------------------------------------------------------------
+
+def _deduplicate_profiles(profiles: list[DetectedProfile]) -> list[DetectedProfile]:
+    """
+    In Moroccan charpente plans, the same physical element appears in multiple
+    views (File 1 = long-pan, File 2 = adjacent bay, File .1 = pignon).
+    Rule: same designation + category + role + length → ONE entry, MAX quantity.
+    If repere is set and identical → always merge.
+    """
+    from collections import defaultdict
+    groups: dict[str, list[DetectedProfile]] = defaultdict(list)
+
+    for p in profiles:
+        desig  = (p.designation  or "").strip().upper()
+        cat    = (p.type         or "").strip().lower()   # 'type' holds category
+        role   = (p.role         or "").strip().upper()
+        length = round(p.length_m, 2) if p.length_m is not None else None
+
+        if p.id and not p.id.startswith("P0"):           # repere is meaningful
+            key = f"REPERE:{p.id.strip().upper()}"
+        else:
+            key = f"{desig}|{cat}|{role}|{length}"
+
+        groups[key].append(p)
+
+    result: list[DetectedProfile] = []
+    for group in groups.values():
+        if len(group) == 1:
+            result.append(group[0])
+        else:
+            # FILES = VIEWS: same element seen in N views → MAX quantity, not SUM
+            best = max(group, key=lambda p: (p.quantity, p.confidence))
+            best.confidence = max(p.confidence for p in group)
+            logger.info(
+                f"[DEDUP] Merged {len(group)}x '{best.designation}' "
+                f"(role={best.role}) → qty={best.quantity}"
+            )
+            result.append(best)
+
+    return result
 
 # ---------------------------------------------------------------------------
 # App
@@ -285,6 +329,9 @@ async def extract(
                 drawing_type = r.drawing_type
             provider_used = r.provider_used
 
+        # FILES=VIEWS deduplication (Python safety net)
+        all_profiles_raw = _deduplicate_profiles(all_profiles_raw)
+
         # Enrich with RulesDB (masse linéaire from EN tables)
         profiles_out = [_enrich_profile(p) for p in all_profiles_raw]
 
@@ -433,6 +480,9 @@ async def extract_async(
                     if r.drawing_type != 'unknown':
                         drawing_type = r.drawing_type
                     provider_used = r.provider_used
+
+                # FILES=VIEWS deduplication (Python safety net)
+                all_profiles_raw = _deduplicate_profiles(all_profiles_raw)
 
                 profiles_out = [_enrich_profile(p) for p in all_profiles_raw]
                 total_weight = sum(p.poids_total_kg for p in profiles_out if p.poids_total_kg is not None)

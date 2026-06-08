@@ -434,6 +434,15 @@ Your task:
      c) Never deduplicate across different categories
         (platine ≠ gousset even if same dims)
 
+     ⚠️ ANTI-DOUBLING — FILES = VIEWS (CRITICAL):
+        If IPE400 POTEAU appears in PASS1 with qty=14 (Vue long-pan)
+        AND also appears in PASS2 with qty=14 (Vue pignon or adjacent file):
+        → They are THE SAME 14 physical columns seen from 2 angles
+        → Output ONE entry with qty = MAX(14, 14) = 14  ← NOT 14+14=28
+        → NEVER SUM quantities across views of the same element
+        → Proof: if adding quantities creates more pieces than the building
+          has bays, you are doubling — STOP and use MAX instead
+
   3. Keep building_dimensions from PASS1
   4. Merge all a_valider[] and warnings[] from both
   5. Recompute summary:
