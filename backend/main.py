@@ -700,14 +700,16 @@ def _enrich_profile(p: Any) -> ProfileOut:
     fer_plat_match = re.search(r'(?:FER\s*PLAT|PL).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
     
     if pl_match and not boulon_match and not tole_match:
-        a, b, c = map(float, pl_match.groups())
-        # Volume en m3 * 7850 kg/m3 (Densité exacte acier)
-        poids_unitaire = round((a/1000) * (b/1000) * (c/1000) * 7850, 3)
+        vals = sorted([float(pl_match.group(1)), float(pl_match.group(2)), float(pl_match.group(3))])
+        # ep = smallest dim, larg & long = the two larger dims
+        ep, larg, long_ = vals[0], vals[1], vals[2]
+        # Volume × density (kg/m³) — reference uses 7850
+        poids_unitaire = round((ep/1000) * (larg/1000) * (long_/1000) * 7850, 3)
         poids = round(poids_unitaire * qty_val, 2)
         methode = "Calcul"
-        # Peinture pour les platines (les 2 faces principales)
-        surface_peinture = round(2 * (a * b) / 1000000.0 * qty_val, 2)
-        length_val = None # Ensure length is hidden for plates
+        # Paint surface = 2 main faces (larg × long)
+        surface_peinture = round(2 * (larg * long_) / 1_000_000 * qty_val, 3)
+        length_val = None  # plates have no linear length
         masse = None
     elif fer_plat_match and not masse and not boulon_match and not tole_match:
         # Fer Plat: Width x Thickness (e.g. PL 150x6)
