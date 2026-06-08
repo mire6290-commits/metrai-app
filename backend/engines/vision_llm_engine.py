@@ -329,14 +329,34 @@ class VisionLLMEngine:
         page_number: int,
         tile_index: int | None,
     ) -> VisionResult:
-        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        # ── Robust JSON extractor ──────────────────────────────────────────
+        # Handles: <think>…</think>, ```json … ```, plain text before/after
+        import re as _re
+        text = raw
+
+        # 1. Strip <think>…</think> blocks (Ollama / DeepSeek chain-of-thought)
+        text = _re.sub(r'<think>.*?</think>', '', text, flags=_re.DOTALL).strip()
+
+        # 2. Strip markdown fences
+        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+        # 3. Extract from first '{' to last '}'
+        start = text.find('{')
+        end   = text.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            clean = text[start:end+1]
+        else:
+            clean = text
+        # ──────────────────────────────────────────────────────────────────
+
         try:
             data = json.loads(clean)
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parse failed: {e}\nRaw: {raw[:500]}")
+            logger.error(f"JSON parse failed: {e}\nRaw (first 600): {raw[:600]}")
             return VisionResult(
                 scale_detected=None,
                 scale_confidence=0.0,
+                metadata={},
                 profiles=[],
                 unreadable_zones=["entire page — JSON parse failed"],
                 warnings=[f"JSON parse error: {e}"],
