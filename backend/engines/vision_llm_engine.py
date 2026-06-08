@@ -260,76 +260,62 @@ class VisionLLMEngine:
             raise ValueError(f"OpenRouter returned empty choices: {data}")
         return data["choices"][0]["message"]["content"]
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=4, max=15))
     def _call_ollama(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OLLAMA_API_KEY")
         if not api_key:
             raise ValueError("OLLAMA_API_KEY not set")
         api_key = api_key.strip()
-        
+
         import requests
         model = os.getenv("OLLAMA_MODEL", "llama3.2-vision")
+
+        # Resize to 1024px max — faster inference, less timeout risk
         img_copy = image.copy()
-        # Reduce image size for Ollama Cloud to prevent 10053 Connection Aborted error
-        img_copy.thumbnail((2048, 2048))
+        img_copy.thumbnail((1024, 1024))
         img_b64 = _pil_to_base64(img_copy)
-        
-        # We use the standard Ollama chat API structure
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # Paid Ollama → OpenAI-compatible endpoint directly
         payload = {
             "model": model,
-            "stream": False,
             "messages": [
                 {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
                     "role": "user",
-                    "content": SYSTEM_PROMPT + "\n\n" + user_message,
-                    "images": [img_b64]
-                }
-            ]
-        }
-        logger.info(f"Sending request to Ollama API (model: {model})...")
-        resp = requests.post("https://ollama.com/api/chat", headers=headers, json=payload, timeout=300)
-        
-        if not resp.ok:
-            # Fallback to OpenAI compatible endpoint if api/chat fails
-            if resp.status_code in [401, 404]:
-                logger.info(f"api/chat returned {resp.status_code}. Trying OpenAI-compatible endpoint v1/chat/completions...")
-                payload_openai = {
-                    "model": model,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": SYSTEM_PROMPT + "\n\n" + user_message},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
-                            ]
-                        }
+                    "content": [
+                        {"type": "text",      "text": user_message},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
                     ]
                 }
-                resp = requests.post("https://api.ollama.com/v1/chat/completions", headers=headers, json=payload_openai, timeout=300)
-                if not resp.ok:
-                    error_msg = f"Ollama API failed (both endpoints): {resp.status_code} - {resp.text}"
-                    logger.error(error_msg)
-                    raise ValueError(error_msg)
-                
-                data = resp.json()
-                if "choices" not in data or not data["choices"]:
-                    raise ValueError(f"Ollama API returned empty choices: {data}")
-                return data["choices"][0]["message"]["content"]
-            else:
-                error_msg = f"Ollama API failed: {resp.status_code} - {resp.text}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
-                
-        # Parse standard Ollama chat response
-        try:
-            data = resp.json()
-            if "message" in data and "content" in data["message"]:
-                return data["message"]["content"]
-            else:
-                raise ValueError(f"Unexpected Ollama API response format: {data}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse JSON from Ollama API: {e}\nRaw response: {resp.text[:500]}")
+            ],
+            "max_tokens": 4000,
+            "temperature": 0.1
+        }
+
+        logger.info(f"Sending request to Ollama paid API (model: {model})...")
+        resp = requests.post(
+            "https://api.ollama.com/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=(30, 300)  # (connect_timeout, read_timeout)
+        )
+
+        if not resp.ok:
+            raise ValueError(f"Ollama API error: {resp.status_code} - {resp.text[:500]}")
+
+        data = resp.json()
+        if "choices" not in data or not data["choices"]:
+            raise ValueError(f"Ollama API returned empty choices: {data}")
+        return data["choices"][0]["message"]["content"]
+
 
     def _parse_response(
         self,
