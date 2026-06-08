@@ -408,57 +408,18 @@ async def extract_async(
                         page_images = [p for p in page_images if p.page_number in requested]
 
                     for page_img in page_images:
-                        logger.info(f"Applying mathematical grid tiling for page {page_img.page_number}...")
-                        zones = [
-                            {"zone_type": "full_page", "bbox_normalized": [0.0, 0.0, 1.0, 1.0]},
-                            {"zone_type": "quadrant_top_left", "bbox_normalized": [0.0, 0.0, 0.55, 0.55]},
-                            {"zone_type": "quadrant_top_right", "bbox_normalized": [0.0, 0.45, 0.55, 1.0]},
-                            {"zone_type": "quadrant_bottom_left", "bbox_normalized": [0.45, 0.0, 1.0, 0.55]},
-                            {"zone_type": "quadrant_bottom_right", "bbox_normalized": [0.45, 0.45, 1.0, 1.0]},
-                        ]
-                        
-                        zone_results = []
-                        img_w, img_h = page_img.image.size
-                        
-                        for z_idx, zone in enumerate(zones):
-                            zt = zone.get("zone_type", "unknown")
-                            bbox = zone.get("bbox_normalized", [0.0, 0.0, 1.0, 1.0])
-                            if not isinstance(bbox, list) or len(bbox) != 4:
-                                bbox = [0.0, 0.0, 1.0, 1.0]
-                            
-                            y_min, x_min, y_max, x_max = bbox
-                            
-                            # Defensive check against hallucinated coordinates
-                            left = min(x_min, x_max) * img_w
-                            right = max(x_min, x_max) * img_w
-                            top = min(y_min, y_max) * img_h
-                            bottom = max(y_min, y_max) * img_h
-                            
-                            box_px = (
-                                int(left),
-                                int(top),
-                                int(right),
-                                int(bottom)
-                            )
-                            padding_x = int(img_w * 0.05)
-                            padding_y = int(img_h * 0.05)
-                            box_px = (
-                                max(0, box_px[0] - padding_x),
-                                max(0, box_px[1] - padding_y),
-                                min(img_w, box_px[2] + padding_x),
-                                min(img_h, box_px[3] + padding_y)
-                            )
-                            
-                            crop_img = page_img.image.crop(box_px)
-                            ctx = context.copy()
-                            ctx["zone_type"] = zt
-                            
-                            res = _vision.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx, context=ctx)
-                            zone_results.append(res)
-    
-                        if zone_results:
-                            merged = merge_tile_results(zone_results)
-                            all_results.append(merged)
+                        logger.info(f"Single full-page analysis for page {page_img.page_number}...")
+                        ctx = context.copy()
+                        ctx["zone_type"] = "full_page"
+                        # Single call — Gemini/Claude can read full A0 plan in one shot
+                        # (5-zone tiling was burning 5× the API quota)
+                        res = _vision.analyze(
+                            page_img.image,
+                            page_number=page_img.page_number,
+                            tile_index=None,
+                            context=ctx
+                        )
+                        all_results.append(res)
     
                     if not all_results:
                         TASKS_STORE[task_id] = {'status': 'error', 'detail': 'No profiles extracted'}
