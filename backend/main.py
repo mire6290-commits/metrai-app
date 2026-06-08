@@ -244,7 +244,7 @@ async def extract(
                 
                 # --- PASS 3: Merge & Deduplicate ---
                 logger.info(f"Executing PASS 3 (Merge & Deduplicate) for page {page_img.page_number}...")
-                pass3_payload = f"PASS1_JSON:\\n{res1.raw_response}\\n\\nPASS2_JSONS:\\n" + "\\n---\\n".join(pass2_jsons)
+                pass3_payload = f"PASS1_JSON:\n{res1.raw_response}\n\nPASS2_JSONS:\n" + "\n---\n".join(pass2_jsons)
                 
                 ctx3 = context.copy()
                 ctx3["zone_type"] = "merge"

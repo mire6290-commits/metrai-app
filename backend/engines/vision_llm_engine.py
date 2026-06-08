@@ -106,10 +106,10 @@ class VisionLLMEngine:
         provider: VisionProvider | str | None = None,
         fallback: bool = True,
     ):
-        env_provider = os.getenv("VISION_PROVIDER", "openrouter").lower()
+        env_provider = os.getenv("VISION_PROVIDER", "ollama").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
-        self.fallback_provider = VisionProvider.OPENROUTER
+        self.fallback_provider = VisionProvider.GEMINI
         logger.info(f"VisionLLMEngine: primary={self.primary}, fallback={self.fallback_provider if fallback else 'disabled'}")
 
     def analyze(
@@ -234,7 +234,7 @@ class VisionLLMEngine:
         api_key = api_key.strip()  # Strip newlines or spaces to prevent header errors
         
         import requests
-        model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash-preview:free")
+        model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
@@ -402,7 +402,7 @@ class VisionLLMEngine:
         lines.append(f"YOU ARE IN {pass_mode}.")
         
         if context:
-            lines.append("\\nContext:")
+            lines.append("\nContext:")
             if "project" in context:
                 lines.append(f"- Project: {context['project']}")
             if "ref" in context:
@@ -410,8 +410,8 @@ class VisionLLMEngine:
             if "scale_hint" in context:
                 lines.append(f"- Expected scale: {context['scale_hint']}")
             
-        lines.append("\\nExtract all required steel profiles and return the JSON format specified for this PASS. Nothing else.")
-        return "\\n".join(lines)
+        lines.append("\nExtract ALL steel profiles visible in this drawing image. Return ONLY valid JSON as specified for this PASS. No explanation, no markdown, just JSON.")
+        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
