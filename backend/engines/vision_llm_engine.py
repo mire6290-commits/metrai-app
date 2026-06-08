@@ -243,7 +243,7 @@ class VisionLLMEngine:
         api_key = api_key.strip()  # Strip newlines or spaces to prevent header errors
         
         import requests
-        model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct:free")
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
