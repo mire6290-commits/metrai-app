@@ -37,6 +37,7 @@ def kill_port_process(port: int):
     except Exception:
         pass
 
+@st.cache_resource
 def start_backend():
     print("Killing existing backend process to force reload...")
     kill_port_process(8000)
