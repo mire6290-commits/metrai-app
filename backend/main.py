@@ -742,13 +742,52 @@ def _enrich_profile(p: Any) -> ProfileOut:
     # BOULONNERIE
     boulon_match = re.search(r'(?:BOU|BOULON|M)\s*(\d+)\s*[xX\*]\s*(\d+)', designation, re.IGNORECASE)
     if boulon_match:
-        d_boulon = boulon_match.group(1)
-        l_boulon = boulon_match.group(2)
-        boulon_key = f"M{d_boulon}*{l_boulon}"
+        d_boulon = int(boulon_match.group(1))
+        l_boulon = float(boulon_match.group(2))
+        boulon_key = f"M{d_boulon}*{int(l_boulon)}"
         pu_boulon = CATALOGUE_BOULONNERIE.get(boulon_key)
+        if not pu_boulon:
+            prefix = f"M{d_boulon}*"
+            same_d = {}
+            for k, v in CATALOGUE_BOULONNERIE.items():
+                if k.startswith(prefix):
+                    try:
+                        l_val = int(k.split("*")[1])
+                        same_d[l_val] = v
+                    except:
+                        pass
+            if same_d:
+                sorted_lens = sorted(same_d.keys())
+                if l_boulon <= sorted_lens[0]:
+                    if len(sorted_lens) >= 2:
+                        l1, l2 = sorted_lens[0], sorted_lens[1]
+                        w1, w2 = same_d[l1], same_d[l2]
+                        rate = (w2 - w1) / (l2 - l1)
+                        pu_boulon = max(0.01, round(w1 - rate * (l1 - l_boulon), 3))
+                    else:
+                        pu_boulon = same_d[sorted_lens[0]]
+                elif l_boulon >= sorted_lens[-1]:
+                    if len(sorted_lens) >= 2:
+                        l1, l2 = sorted_lens[-2], sorted_lens[-1]
+                        w1, w2 = same_d[l1], same_d[l2]
+                        rate = (w2 - w1) / (l2 - l1)
+                        pu_boulon = round(w2 + rate * (l_boulon - l2), 3)
+                    else:
+                        pu_boulon = same_d[sorted_lens[-1]]
+                else:
+                    for i in range(len(sorted_lens) - 1):
+                        l1, l2 = sorted_lens[i], sorted_lens[i+1]
+                        if l1 <= l_boulon <= l2:
+                            w1, w2 = same_d[l1], same_d[l2]
+                            rate = (w2 - w1) / (l2 - l1)
+                            pu_boulon = round(w1 + rate * (l_boulon - l1), 3)
+                            break
+            else:
+                vol_mm3 = 0.7854 * (d_boulon**2) * l_boulon + 1.2 * (d_boulon**3)
+                pu_boulon = round(vol_mm3 * 7.85e-6, 3)
         if pu_boulon:
             poids_unitaire = pu_boulon
-            methode = "Catalogue"
+            methode = "Catalogue" if boulon_key in CATALOGUE_BOULONNERIE else "Calcul (Extrapolé)"
             poids = round(poids_unitaire * qty_val, 2)
             masse = None
             length_val = None
@@ -782,6 +821,10 @@ def _enrich_profile(p: Any) -> ProfileOut:
     # Check for PL, TN, PLATINE, GOUSSET, RAIDISSEUR A*B*C
     pl_match = re.search(r'(?:PLT|TN|PLAT|GOUSSET|RAID).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
     fer_plat_match = re.search(r'(?:FER\s*PLAT|PL).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
+    marche_match = re.search(r'(?:MARCHE).*?(\d+)\s*[xX\*]\s*(\d+)', designation, re.IGNORECASE)
+    role_upper = getattr(p, 'role', '').upper()
+    if not marche_match and 'MARCHE' in role_upper:
+        marche_match = re.search(r'(\d+)\s*[xX\*]\s*(\d+)', designation)
     
     if pl_match and not boulon_match and not tole_match:
         vals = sorted([float(pl_match.group(1)), float(pl_match.group(2)), float(pl_match.group(3))])
@@ -798,15 +841,35 @@ def _enrich_profile(p: Any) -> ProfileOut:
     elif fer_plat_match and not masse and not boulon_match and not tole_match:
         # Fer Plat: Width x Thickness (e.g. PL 150x6)
         width, thickness = map(float, fer_plat_match.groups())
-        # masse linéaire kg/m
-        masse_val = width * thickness * 0.00785
-        masse = round(masse_val, 3)
-        poids = round(masse * length_val * qty_val, 2)
-        methode = "Calcul"
-        # Surface peinture: perimeter of cross section * length
-        perimeter_m = 2 * (width + thickness) / 1000.0
-        if length_val > 0:
-            surface_peinture = round(perimeter_m * length_val * qty_val, 2)
+        # If length is missing or 0, check if it's a Platine (which is usually square)
+        # Or if it's a plate, we can assume length = width (square plate)
+        if (length_val is None or length_val == 0.0) and (
+            any(word in designation for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER']) or
+            any(word in role_upper for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER'])
+        ):
+            poids_unitaire = round((width/1000) * (width/1000) * (thickness/1000) * 7850, 3)
+            poids = round(poids_unitaire * qty_val, 2)
+            methode = "Calcul (Carré)"
+            surface_peinture = round(2 * (width * width) / 1_000_000 * qty_val, 3)
+            masse = None
+            length_val = None
+        else:
+            masse_val = width * thickness * 0.00785
+            masse = round(masse_val, 3)
+            poids = round(masse * length_val * qty_val, 2) if (length_val is not None and length_val > 0) else 0.0
+            methode = "Calcul"
+            perimeter_m = 2 * (width + thickness) / 1000.0
+            if length_val is not None and length_val > 0:
+                surface_peinture = round(perimeter_m * length_val * qty_val, 2)
+    elif marche_match and not methode and not boulon_match and not tole_match:
+        a_dim = float(marche_match.group(1))
+        b_dim = float(marche_match.group(2))
+        area_m2 = (a_dim / 1000.0) * (b_dim / 1000.0)
+        poids_unitaire = round(area_m2 * 40.0, 2)  # 40 kg/m²
+        poids = round(poids_unitaire * qty_val, 2)
+        methode = "Estimation (40 kg/m²)"
+        masse = None
+        length_val = None
 
     # Calcul de la surface de peinture pour les profilés (formules approchées Mémotech)
     if not perimeter_m and not pl_match and not boulon_match and not tole_match:
