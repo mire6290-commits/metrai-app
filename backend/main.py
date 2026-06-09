@@ -223,7 +223,7 @@ async def extract(
         if mode == 'text':
             logger.info("Using LlamaParse + TextLLMEngine for direct PDF text extraction.")
             md_text = _llamaparse.parse_to_markdown(str(tmp_path))
-            res = _text_llm.analyze(md_text, context)
+            res = _text_llm.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
             all_results.append(res)
         else:
             # Agentic Zoning Architecture
@@ -397,7 +397,7 @@ async def extract_async(
                 if mode == 'text':
                     logger.info("Using LlamaParse + TextLLMEngine for direct PDF text extraction (Async).")
                     md_text = _llamaparse.parse_to_markdown(str(tmp_path))
-                    res = _text_llm.analyze(md_text, context)
+                    res = _text_llm.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
                     all_results.append(res)
                 else:
                     logger.info("Using VisionLLMEngine with Agentic Zoning (Async).")
