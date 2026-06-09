@@ -109,6 +109,15 @@ RULE: if designation contains a steel profile code → always steel.
       → flag as BÉTON, put in a_valider, do NOT add to profiles[].
 
 ════════════════════════════════════════════════════════════════
+RULE FOR NON-WAREHOUSE DRAWINGS (Escabeau, Stairs, Platforms, etc.)
+════════════════════════════════════════════════════════════════
+If the drawing is not an industrial warehouse (e.g., it is a stepladder/escabeau, staircase, platform, machinery support, or general assembly detail):
+- Extract ALL steel profiles (UPN, IPE, HEA, L, PL, Tube, CHS, RHS, SHS, etc.) annotated in the drawing.
+- Do NOT return an empty profiles list.
+- Set the category to the most relevant type (e.g., tube_carre, platine) or to "autre" if it doesn't fit the standard warehouse categories.
+- Extract the quantities if annotated (e.g. "4 UPN160", "2 UPN160"), otherwise default to the number shown or 1.
+
+════════════════════════════════════════════════════════════════
 FILES = VIEWS, NOT ELEMENTS (CRITICAL — source #1 of duplicates)
 ════════════════════════════════════════════════════════════════
 In Moroccan charpente plans, "File 1", "File 2", "File .1", "File A"
@@ -528,6 +537,7 @@ Your task:
        poteaux, traverses, sablières, potelets,
        jarrets, lisses, CVT, poutre au vent,
        dretelles, liernes, cadre périphérique, pannes
+       (For non-warehouse drawings like escabeau or stairs, extract all visible profiles and assign category 'autre' or the closest match)
   7. DO NOT extract platines, goussets, échantignolles,
      tiges d'ancrage from detail zones — leave for PASS 2
   8. For each profile: read repère, designation, quantity,
