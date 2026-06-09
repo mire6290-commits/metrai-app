@@ -18,7 +18,29 @@ def run_uvicorn():
     from backend import main
     uvicorn.run(main.app, host="127.0.0.1", port=8000, log_level="error")
 
+def kill_port_process(port: int):
+    import os
+    import signal
+    import subprocess
+    try:
+        pids = subprocess.check_output(["lsof", "-t", f"-i:{port}"]).decode().strip()
+        if pids:
+            for pid in pids.split():
+                os.kill(int(pid), signal.SIGKILL)
+            print(f"Killed process on port {port} via lsof")
+            return
+    except Exception:
+        pass
+    try:
+        subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True)
+        print(f"Killed process on port {port} via fuser")
+    except Exception:
+        pass
+
 def start_backend():
+    print("Killing existing backend process to force reload...")
+    kill_port_process(8000)
+    time.sleep(1)
     if not is_port_in_use(8000):
         print("Starting FastAPI backend in a background thread...")
         t = threading.Thread(target=run_uvicorn, daemon=True)
