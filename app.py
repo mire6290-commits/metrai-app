@@ -83,6 +83,7 @@ with st.sidebar:
     pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
     mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
     provider = st.selectbox("AI Provider", ["openai", "ollama", "openrouter", "gemini"])
+    detailed_mode = st.checkbox("🔍 Mode Plan Détaillé / Assemblage", value=False, help="Activez ceci pour extraire tous les détails et ignorer les contraintes de hangar standard (Recommandé pour Padel, Escabeaux, et assemblages complexes).")
     
     if st.button("🔄 Reset App State", help="Click this if the extraction button gets stuck."):
         st.session_state.extraction_result = None
@@ -125,7 +126,8 @@ if uploaded_file is not None:
                     "scale_hint": scale_hint,
                     "pages": pages,
                     "mode": mode,
-                    "provider": provider
+                    "provider": provider,
+                    "detailed_mode": "true" if detailed_mode else "false"
                 }
                 
                 try:

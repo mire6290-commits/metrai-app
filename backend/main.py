@@ -191,6 +191,7 @@ async def extract(
     pages: str = Form(default="all", description="'all' or comma-separated page numbers e.g. '1,2,3'"),
     mode: str = Form(default="vision", description="'vision' | 'regex' | 'hybrid'"),
     provider: str = Form(default=None, description="Vision/Text provider e.g. 'openai', 'ollama'"),
+    detailed_mode: bool = Form(default=False, description="Force extraction of all details and ignore warehouse constraints"),
 ):
     """
     Extract steel profiles from a structural drawing PDF.
@@ -224,7 +225,7 @@ async def extract(
         if total_pages_pdf == 0:
             raise HTTPException(status_code=400, detail="No valid pages found")
 
-        is_stairs = _is_non_warehouse(project, file.filename)
+        is_stairs = detailed_mode or _is_non_warehouse(project, file.filename)
         context = {
             "project": project,
             "ref": file.filename,
@@ -395,7 +396,8 @@ async def extract_async(
     scale_hint: str = Form(''),
     project: str = Form(''),
     ref: str = Form(''),
-    provider: str = Form(default=None)
+    provider: str = Form(default=None),
+    detailed_mode: bool = Form(default=False),
 ):
     task_id = str(uuid.uuid4())
     TASKS_STORE[task_id] = {'status': 'processing'}
@@ -417,10 +419,12 @@ async def extract_async(
                 vision_engine = VisionLLMEngine(provider=req_provider, fallback=True)
                 text_engine = TextLLMEngine(provider=req_provider)
 
+                is_stairs = detailed_mode or _is_non_warehouse(project, filename)
                 context = {
                     'project': project,
                     'ref': filename,
                     'scale_hint': scale_hint or 'unknown',
+                    'is_stairs': is_stairs
                 }
 
                 all_results = []
