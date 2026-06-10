@@ -76,6 +76,12 @@ def _deduplicate_profiles(profiles: list[DetectedProfile]) -> list[DetectedProfi
 
     return result
 
+def _is_non_warehouse(project: str, filename: str) -> bool:
+    project_lower = str(project).lower()
+    fn_lower = str(filename).lower()
+    keywords = ["escabeau", "escalier", "stair", "ladder", "plateforme", "passerelle", "rampe", "platform", "support", "assemblage", "detail"]
+    return any(kw in project_lower or kw in fn_lower for kw in keywords)
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -104,7 +110,7 @@ _text_llm: TextLLMEngine | None = None
 async def startup():
     global _parser, _vision, _llamaparse, _text_llm
     _parser = PDFParser(dpi=int(os.getenv("RENDER_DPI", "300")))
-    provider = os.getenv("VISION_PROVIDER", "claude")
+    provider = os.getenv("VISION_PROVIDER", "openai")
     _vision = VisionLLMEngine(fallback=True)
     _llamaparse = LlamaParseEngine()
     _text_llm = TextLLMEngine(provider=provider)
@@ -137,14 +143,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ---------------------------------------------------------------------------
 
 class ProfileOut(BaseModel):
-    id: str
-    designation: str
-    type: str
-    role: str
-    length_m: float | None
-    quantity: int
-    zone: str
-    confidence: float
+    id: str = "P00"
+    designation: str = ""
+    type: str = "unknown"
+    role: str = ""
+    length_m: float | None = None
+    quantity: int = 1
+    zone: str = ""
+    confidence: float = 0.5
     # Enriched from RulesDB
     masse_lineaire_kg_m: float | None = None
     poids_unitaire: Optional[float] = None
@@ -174,7 +180,7 @@ class ExtractionResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "provider": os.getenv("VISION_PROVIDER", "claude")}
+    return {"status": "ok", "provider": os.getenv("VISION_PROVIDER", "openai")}
 
 
 @app.post("/extract")
@@ -184,6 +190,7 @@ async def extract(
     scale_hint: str = Form(default="", description="Expected scale e.g. '1:50' (optional)"),
     pages: str = Form(default="all", description="'all' or comma-separated page numbers e.g. '1,2,3'"),
     mode: str = Form(default="vision", description="'vision' | 'regex' | 'hybrid'"),
+    provider: str = Form(default=None, description="Vision/Text provider e.g. 'openai', 'ollama'"),
 ):
     """
     Extract steel profiles from a structural drawing PDF.
@@ -203,6 +210,11 @@ async def extract(
     tmp_path.write_bytes(content)
 
     try:
+        # Determine provider to use (default to env var if not specified)
+        req_provider = provider or os.getenv("VISION_PROVIDER", "openai")
+        vision_engine = VisionLLMEngine(provider=req_provider, fallback=True)
+        text_engine = TextLLMEngine(provider=req_provider)
+
         # Determine pages to process
         import fitz
         doc = fitz.open(str(tmp_path))
@@ -212,22 +224,24 @@ async def extract(
         if total_pages_pdf == 0:
             raise HTTPException(status_code=400, detail="No valid pages found")
 
+        is_stairs = _is_non_warehouse(project, file.filename)
         context = {
             "project": project,
             "ref": file.filename,
             "scale_hint": scale_hint or "unknown",
+            "is_stairs": is_stairs
         }
 
         all_results: list[VisionResult] = []
 
         if mode == 'text':
-            logger.info("Using LlamaParse + TextLLMEngine for direct PDF text extraction.")
+            logger.info(f"Using LlamaParse + TextLLMEngine ({req_provider}) for direct PDF text extraction.")
             md_text = _llamaparse.parse_to_markdown(str(tmp_path))
-            res = _text_llm.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
+            res = text_engine.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
             all_results.append(res)
         else:
             # Agentic Zoning Architecture
-            logger.info("Using VisionLLMEngine with Agentic Zoning.")
+            logger.info(f"Using VisionLLMEngine ({req_provider}) with Agentic Zoning.")
             _parser.dpi = 150 # Prevent Streamlit Cloud OOM crash on large drawings
             
             import fitz
@@ -251,7 +265,7 @@ async def extract(
                 logger.info(f"Executing PASS 1 on full page...")
                 ctx1 = context.copy()
                 ctx1["zone_type"] = "full_page"
-                res1 = _vision.analyze(page_img.image, page_number=page_img.page_number, tile_index=0, context=ctx1, pass_mode="PASS1")
+                res1 = vision_engine.analyze(page_img.image, page_number=page_img.page_number, tile_index=0, context=ctx1, pass_mode="PASS1")
                 
                 # --- PASS 2: Accessories (Quadrants) ---
                 zones = [
@@ -262,29 +276,40 @@ async def extract(
                 ]
                 
                 pass2_jsons = []
-                img_w, img_h = page_img.image.size
+                import fitz
+                page_doc = fitz.open(str(tmp_path))
+                page_obj = page_doc[page_num - 1]
+                page_rect = page_obj.rect
+                page_w, page_h = page_rect.width, page_rect.height
+                from PIL import Image
                 
                 for z_idx, zone in enumerate(zones):
                     zt = zone.get("zone_type", "unknown")
                     y_min, x_min, y_max, x_max = zone.get("bbox_normalized", [0.0, 0.0, 1.0, 1.0])
                     
-                    left, right = min(x_min, x_max) * img_w, max(x_min, x_max) * img_w
-                    top, bottom = min(y_min, y_max) * img_h, max(y_min, y_max) * img_h
+                    padding_x = page_w * 0.05
+                    padding_y = page_h * 0.05
+                    x0 = max(0.0, min(x_min, x_max) * page_w - padding_x)
+                    y0 = max(0.0, min(y_min, y_max) * page_h - padding_y)
+                    x1 = min(page_w, max(x_min, x_max) * page_w + padding_x)
+                    y1 = min(page_h, max(y_min, y_max) * page_h + padding_y)
                     
-                    padding_x, padding_y = int(img_w * 0.05), int(img_h * 0.05)
-                    box_px = (
-                        max(0, int(left) - padding_x), max(0, int(top) - padding_y),
-                        min(img_w, int(right) + padding_x), min(img_h, int(bottom) + padding_y)
-                    )
+                    clip_rect = fitz.Rect(x0, y0, x1, y1)
                     
-                    logger.info(f"Executing PASS 2 on {zt}...")
-                    crop_img = page_img.image.crop(box_px)
+                    logger.info(f"Executing PASS 2 on {zt} (Direct PDF 300 DPI Render)...")
+                    zoom = 300.0 / 72.0
+                    mat = fitz.Matrix(zoom, zoom)
+                    pix = page_obj.get_pixmap(matrix=mat, clip=clip_rect, alpha=False)
+                    crop_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    
                     ctx2 = context.copy()
                     ctx2["zone_type"] = zt
                     
                     await asyncio.sleep(4.5) # Prevent rate limits
-                    res2 = _vision.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx+1, context=ctx2, pass_mode="PASS2")
+                    res2 = vision_engine.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx+1, context=ctx2, pass_mode="PASS2")
                     pass2_jsons.append(res2.raw_response)
+                
+                page_doc.close()
                 
                 # --- PASS 3: Merge & Deduplicate ---
                 logger.info(f"Executing PASS 3 (Merge & Deduplicate) for page {page_img.page_number}...")
@@ -295,7 +320,7 @@ async def extract(
                 
                 try:
                     await asyncio.sleep(4.5)
-                    merged_res = _text_llm.analyze(pass3_payload, context=ctx3, pass_mode="PASS3")
+                    merged_res = text_engine.analyze(pass3_payload, context=ctx3, pass_mode="PASS3")
                     all_results.append(merged_res)
                 except Exception as e:
                     logger.error(f"PASS 3 Failed: {e}. Falling back to Python merge.")
@@ -369,7 +394,8 @@ async def extract_async(
     pages: str = Form('all'),
     scale_hint: str = Form(''),
     project: str = Form(''),
-    ref: str = Form('')
+    ref: str = Form(''),
+    provider: str = Form(default=None)
 ):
     task_id = str(uuid.uuid4())
     TASKS_STORE[task_id] = {'status': 'processing'}
@@ -386,6 +412,11 @@ async def extract_async(
                 tmp_path = Path(tmp.name)
             
             try:
+                # Determine provider to use (default to env var if not specified)
+                req_provider = provider or os.getenv("VISION_PROVIDER", "openai")
+                vision_engine = VisionLLMEngine(provider=req_provider, fallback=True)
+                text_engine = TextLLMEngine(provider=req_provider)
+
                 context = {
                     'project': project,
                     'ref': filename,
@@ -395,12 +426,12 @@ async def extract_async(
                 all_results = []
                 
                 if mode == 'text':
-                    logger.info("Using LlamaParse + TextLLMEngine for direct PDF text extraction (Async).")
+                    logger.info(f"Using LlamaParse + TextLLMEngine ({req_provider}) for direct PDF text extraction (Async).")
                     md_text = _llamaparse.parse_to_markdown(str(tmp_path))
-                    res = _text_llm.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
+                    res = text_engine.analyze(md_text, context, pass_mode="TEXT_EXTRACTION")
                     all_results.append(res)
                 else:
-                    logger.info("Using VisionLLMEngine with Agentic Zoning (Async).")
+                    logger.info(f"Using VisionLLMEngine ({req_provider}) with Agentic Zoning (Async).")
                     _parser.dpi = 300
                     page_images = _parser.render_pages(str(tmp_path))
                     if pages != "all":
@@ -453,7 +484,7 @@ async def extract_async(
                             ctx = context.copy()
                             ctx["zone_type"] = zt
                             
-                            res = _vision.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx, context=ctx)
+                            res = vision_engine.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx, context=ctx)
                             zone_results.append(res)
     
                         if zone_results:
@@ -636,7 +667,10 @@ def _enrich_profile(p: Any) -> ProfileOut:
         return None
 
     # ─────────────────────────────────────────────────────────────────────
-    raw_designation = p.designation.upper().strip()
+    p_desig = getattr(p, 'designation', '')
+    if p_desig is None:
+        p_desig = ''
+    raw_designation = str(p_desig).upper().strip()
     # Strip noise words
     raw_designation = raw_designation.replace("CORNIÈRE", "").replace("CORNIERE", "").strip()
 
@@ -819,11 +853,14 @@ def _enrich_profile(p: Any) -> ProfileOut:
 
 
     # Check for PL, TN, PLATINE, GOUSSET, RAIDISSEUR A*B*C
-    pl_match = re.search(r'(?:PLT|TN|PLAT|GOUSSET|RAID).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
+    pl_match = re.search(r'(?:PLT|TN|PLAT|GOUSSET|RAID|PLATE|GUSSET|STIFFENER|FLANGE).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
     fer_plat_match = re.search(r'(?:FER\s*PLAT|PL).*?(\d+(?:\.\d+)?)\s*[xX\*]\s*(\d+(?:\.\d+)?)', designation, re.IGNORECASE)
-    marche_match = re.search(r'(?:MARCHE).*?(\d+)\s*[xX\*]\s*(\d+)', designation, re.IGNORECASE)
-    role_upper = getattr(p, 'role', '').upper()
-    if not marche_match and 'MARCHE' in role_upper:
+    marche_match = re.search(r'(?:MARCHE|TREAD|STEP).*?(\d+)\s*[xX\*]\s*(\d+)', designation, re.IGNORECASE)
+    role_val = getattr(p, 'role', '')
+    if role_val is None:
+        role_val = ''
+    role_upper = str(role_val).upper()
+    if not marche_match and any(w in role_upper or w in designation for w in ['MARCHE', 'TREAD', 'STEP']):
         marche_match = re.search(r'(\d+)\s*[xX\*]\s*(\d+)', designation)
     
     if pl_match and not boulon_match and not tole_match:
@@ -844,8 +881,8 @@ def _enrich_profile(p: Any) -> ProfileOut:
         # If length is missing or 0, check if it's a Platine (which is usually square)
         # Or if it's a plate, we can assume length = width (square plate)
         if (length_val is None or length_val == 0.0) and (
-            any(word in designation for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER']) or
-            any(word in role_upper for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER'])
+            any(word in designation for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER', 'PLATE', 'BASEPLATE', 'STIFFENER', 'GUSSET', 'FLANGE']) or
+            any(word in role_upper for word in ['PLATINE', 'PLT', 'GOUSSET', 'RAIDISSEUR', 'FIXATION', 'PALIER', 'PLATE', 'BASEPLATE', 'STIFFENER', 'GUSSET', 'FLANGE'])
         ):
             poids_unitaire = round((width/1000) * (width/1000) * (thickness/1000) * 7850, 3)
             poids = round(poids_unitaire * qty_val, 2)
@@ -856,7 +893,7 @@ def _enrich_profile(p: Any) -> ProfileOut:
         else:
             masse_val = width * thickness * 0.00785
             masse = round(masse_val, 3)
-            poids = round(masse * length_val * qty_val, 2) if (length_val is not None and length_val > 0) else 0.0
+            poids = round(masse * length_val * qty_val, 2) if (length_val is not None and length_val > 0) else None
             methode = "Calcul"
             perimeter_m = 2 * (width + thickness) / 1000.0
             if length_val is not None and length_val > 0:
@@ -899,14 +936,14 @@ def _enrich_profile(p: Any) -> ProfileOut:
         surface_peinture = round(perimeter_m * length_val * qty_val, 2)
 
     out = ProfileOut(
-        id=getattr(p, 'repere', None) or getattr(p, 'id', 'P00'),
-        designation=getattr(p, 'designation', '').strip().upper(), # Keep original designation from AI (e.g. IPE160 instead of IPE 160)
-        type=getattr(p, 'category', getattr(p, 'type', 'unknown')),
-        role=getattr(p, 'role', ''),
+        id=getattr(p, 'repere', None) or getattr(p, 'id', 'P00') or 'P00',
+        designation=(getattr(p, 'designation', '') or '').strip().upper(),
+        type=getattr(p, 'category', None) or getattr(p, 'type', None) or 'unknown',
+        role=getattr(p, 'role', '') or '',
         length_m=length_val,
         quantity=qty_val,
-        zone=getattr(p, 'zone', getattr(p, 'views_confirmed', [''])[0] if getattr(p, 'views_confirmed', None) else ''),
-        confidence=p.confidence,
+        zone=getattr(p, 'zone', None) or (getattr(p, 'views_confirmed', [''])[0] if getattr(p, 'views_confirmed', None) else '') or '',
+        confidence=p.confidence if p.confidence is not None else 0.5,
         masse_lineaire_kg_m=masse,
         poids_unitaire=poids_unitaire,
         poids_total_kg=poids,

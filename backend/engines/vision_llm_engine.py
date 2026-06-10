@@ -106,8 +106,8 @@ class VisionLLMEngine:
         provider: VisionProvider | str | None = None,
         fallback: bool = True,
     ):
-        # Priority: explicit arg > env var > default (ollama)
-        env_provider = os.getenv("VISION_PROVIDER", "ollama").lower()
+        # Priority: explicit arg > env var > default (openai)
+        env_provider = os.getenv("VISION_PROVIDER", "openai").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
         # Fallback chain based on what keys are available
@@ -235,6 +235,69 @@ class VisionLLMEngine:
             return data["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
             raise ValueError(f"Unexpected Gemini response format: {data}") from e
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _call_openai(self, image: Image.Image, user_message: str) -> str:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+        import requests
+        # Prepare base64 image
+        img_copy = image.copy()
+        img_copy.thumbnail((2048, 2048))
+        img_b64 = _pil_to_base64(img_copy)
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model,
+            "max_tokens": 4096,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_message},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{img_b64}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        logger.info(f"Sending request to OpenAI API (model: {model})...")
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=300
+        )
+
+        if not resp.ok:
+            error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        data = resp.json()
+        if "choices" not in data or not data["choices"]:
+            raise ValueError(f"OpenAI returned empty choices: {data}")
+
+        return data["choices"][0]["message"]["content"]
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _call_openrouter(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -243,7 +306,7 @@ class VisionLLMEngine:
         api_key = api_key.strip()  # Strip newlines or spaces to prevent header errors
         
         import requests
-        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct:free")
+        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct")
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
@@ -315,7 +378,7 @@ class VisionLLMEngine:
 
     def _parse_response(
         self,
-        raw: str,
+        raw: str | None,
         provider_used: str,
         page_number: int,
         tile_index: int | None,
@@ -323,6 +386,23 @@ class VisionLLMEngine:
         # ── Robust JSON extractor ──────────────────────────────────────────
         # Handles: <think>…</think>, ```json … ```, plain text before/after
         import re as _re
+        
+        if not raw or not isinstance(raw, str):
+            logger.error(f"Invalid raw response from provider {provider_used}: {raw}")
+            return VisionResult(
+                scale_detected=None,
+                scale_confidence=0.0,
+                metadata={},
+                profiles=[],
+                unreadable_zones=["entire page — LLM returned empty or invalid response"],
+                warnings=[f"LLM returned empty or invalid response"],
+                drawing_type="unknown",
+                raw_response=str(raw),
+                provider_used=provider_used,
+                page_number=page_number,
+                tile_index=tile_index,
+            )
+
         text = raw
 
         # 1. Strip <think>…</think> blocks (Ollama / DeepSeek chain-of-thought)
@@ -360,18 +440,47 @@ class VisionLLMEngine:
 
         profiles = []
         for i, p in enumerate(data.get("profiles", [])):
+            if not isinstance(p, dict):
+                continue
+            
+            # Robust type parsing
+            qty_val = p.get("quantity")
+            try:
+                if qty_val is None:
+                    qty = 1
+                else:
+                    qty = int(float(str(qty_val)))
+            except Exception:
+                qty = 1
+
+            conf_val = p.get("confidence")
+            try:
+                if conf_val is None:
+                    conf = 0.5
+                else:
+                    conf = float(conf_val)
+            except Exception:
+                conf = 0.5
+
+            len_val = p.get("length_m")
+            try:
+                if len_val is not None:
+                    len_val = float(len_val)
+            except Exception:
+                len_val = None
+
             profiles.append(DetectedProfile(
                 id=p.get("repere") or p.get("id", f"P{i:03d}"),
                 type=p.get("category", p.get("type", "unknown")),
-                designation=p.get("designation", ""),
-                role=p.get("role", ""),
-                length_m=p.get("length_m"),
-                length_source=p.get("length_source", ""),
-                quantity=int(p.get("quantity") or 1),
-                quantity_note=p.get("quantity_note", ""),
-                zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else p.get("zone", ""),
-                confidence=float(p.get("confidence", 0.5)),
-                bbox_normalized=p.get("bbox_normalized", [])
+                designation=p.get("designation") or "",
+                role=p.get("role") or "",
+                length_m=len_val,
+                length_source=p.get("length_source") or "",
+                quantity=qty,
+                quantity_note=p.get("quantity_note") or "",
+                zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else (p.get("zone") or ""),
+                confidence=conf,
+                bbox_normalized=p.get("bbox_normalized") or []
             ))
 
         verif = data.get("verification", {})
@@ -386,7 +495,7 @@ class VisionLLMEngine:
                 if isinstance(a, dict):
                     warns.append(f"A_VALIDER: {a.get('element', '')} - {a.get('reason', '')}")
         else:
-            warns = data.get("warnings", [])
+            warns = data.get("warnings", []) or []
 
         return VisionResult(
             scale_detected=data.get("scale_detected"),
@@ -422,6 +531,16 @@ class VisionLLMEngine:
                 lines.append(f"- Expected scale: {context['scale_hint']}")
             
         lines.append("\nExtract ALL steel profiles visible in this drawing image. Return ONLY valid JSON as specified for this PASS. No explanation, no markdown, just JSON.")
+        
+        if context.get("is_stairs"):
+            lines.append("\n⚠️ CRITICAL INSTRUCTION FOR THIS DRAWING:")
+            lines.append("- THIS IS A STAIRS / NON-WAREHOUSE DRAWING.")
+            lines.append("- IGNORE all warehouse-specific constraints (e.g. ignoring main structure in PASS2 or ignoring accessories in PASS1).")
+            lines.append("- Extract EVERY SINGLE steel profile label and detail you see in this image.")
+            lines.append("- Look for profiles like: IPE160, UPN160, L50*5, PL150*6, TN220*70*12, TN145*70*12, TN170*130*12, TN160*82*12, TN285*75*12.")
+            lines.append("- Extract the quantity and length if written next to the profile or in the drawing detail.")
+            lines.append("- For platines (TN/PL), extract all three dimensions as TN ep*larg*long.")
+            
         return "\n".join(lines)
 
 

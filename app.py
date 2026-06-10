@@ -22,6 +22,25 @@ def kill_port_process(port: int):
     import os
     import signal
     import subprocess
+    import sys
+    
+    if sys.platform.startswith('win'):
+        try:
+            # Find PID using netstat
+            output = subprocess.check_output(f'netstat -aon | findstr :{port}', shell=True).decode()
+            pids = set()
+            for line in output.splitlines():
+                parts = line.strip().split()
+                if len(parts) >= 5 and (parts[1].endswith(f':{port}') or parts[1].endswith(f']:{port}')):
+                    pids.add(parts[-1])
+            for pid in pids:
+                if pid != '0':
+                    subprocess.run(f'taskkill /F /PID {pid}', shell=True, capture_output=True)
+                    print(f"Killed process {pid} on port {port} via taskkill")
+            return
+        except Exception as e:
+            print(f"Windows taskkill failed: {e}")
+            
     try:
         pids = subprocess.check_output(["lsof", "-t", f"-i:{port}"]).decode().strip()
         if pids:
@@ -63,6 +82,7 @@ with st.sidebar:
     scale_hint = st.text_input("Scale Hint (Optional)", value="1:50")
     pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
     mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
+    provider = st.selectbox("AI Provider", ["openai", "ollama", "openrouter", "gemini"])
     
     if st.button("🔄 Reset App State", help="Click this if the extraction button gets stuck."):
         st.session_state.extraction_result = None
@@ -104,7 +124,8 @@ if uploaded_file is not None:
                     "project": project_name,
                     "scale_hint": scale_hint,
                     "pages": pages,
-                    "mode": mode
+                    "mode": mode,
+                    "provider": provider
                 }
                 
                 try:

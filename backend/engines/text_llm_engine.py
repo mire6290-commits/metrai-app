@@ -26,7 +26,7 @@ class TextLLMEngine:
     def __init__(self, provider: str = "gemini"):
         self.provider = provider.lower()
         self.model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-latest")
-        if self.provider not in ["gemini", "claude", "openrouter", "ollama"]:
+        if self.provider not in ["gemini", "claude", "openrouter", "ollama", "openai"]:
             self.provider = "gemini"
 
     def analyze(self, text_content: str, context: dict[str, Any] = None, pass_mode: str = "PASS3") -> VisionResult:
@@ -45,6 +45,10 @@ class TextLLMEngine:
             user_msg += f"Ref: {context['ref']}\n"
         
         user_msg += f"\nData:\n{text_content}"
+        
+        if context.get("is_stairs"):
+            user_msg += "\n\n⚠️ REMEMBER: This is a STAIRS / NON-WAREHOUSE drawing. Merge and preserve all extracted profiles (such as IPE160, UPN160, L50*5, PL150*6, TN platines, etc.) and their quantities. Keep them in the final JSON profiles list."
+            
         user_msg += "\n\nCRITICAL: DO NOT STOP EARLY. Return the final unified JSON schema required by the prompt."
 
         # Fallback chain based on the primary provider
@@ -57,6 +61,8 @@ class TextLLMEngine:
             providers_to_try.extend(["gemini", "openrouter"]) # Try gemini first if openrouter fails
         elif primary == "gemini":
             providers_to_try.extend(["openrouter", "gemini"])
+        elif primary == "openai":
+            providers_to_try.extend(["gemini", "openrouter"])
             
         raw_json = None
         last_error = None
@@ -71,6 +77,8 @@ class TextLLMEngine:
                     raw_json = self._call_openrouter_text(user_msg)
                 elif prov == "gemini":
                     raw_json = self._call_gemini_text(user_msg)
+                elif prov == "openai":
+                    raw_json = self._call_openai_text(user_msg)
                 used_provider = prov
                 logger.info(f"TextLLMEngine: Successfully extracted using {prov}")
                 break
@@ -82,6 +90,20 @@ class TextLLMEngine:
             raise RuntimeError(f"All text LLM providers failed! Last error: {last_error}")
             
         # Parse JSON
+        if not raw_json or not isinstance(raw_json, str):
+            logger.error(f"Invalid raw response from text LLM provider: {raw_json}")
+            return VisionResult(
+                scale_detected=None,
+                scale_confidence=0.0,
+                metadata={},
+                profiles=[],
+                unreadable_zones=["entire page — Text LLM returned empty or invalid response"],
+                warnings=[f"Text LLM returned empty or invalid response"],
+                drawing_type="unknown",
+                raw_response=str(raw_json),
+                provider_used=used_provider or "none"
+            )
+
         try:
             data = json.loads(raw_json)
             
@@ -91,12 +113,14 @@ class TextLLMEngine:
                 
             profiles = []
             for p in data.get("profiles", []):
+                if not isinstance(p, dict):
+                    continue
                 # Standardize keys if LLM used "profile" instead of "designation"
                 if "profile" in p and "designation" not in p:
                     p["designation"] = p["profile"]
                 if "designation" in p and "type" not in p:
                     # Very simple type inference
-                    desig = str(p["designation"]).upper()
+                    desig = str(p.get("designation") or "").upper()
                     if "IPE" in desig: p["type"] = "IPE"
                     elif "HEA" in desig: p["type"] = "HEA"
                     elif "HEB" in desig: p["type"] = "HEB"
@@ -104,20 +128,46 @@ class TextLLMEngine:
                     elif "L" in desig or "CORNI" in desig: p["type"] = "ANGLE"
                     else: p["type"] = "OTHER"
                 
+                # Robust type parsing
+                qty_val = p.get("quantity")
+                try:
+                    if qty_val is None:
+                        qty = 1
+                    else:
+                        qty = int(float(str(qty_val)))
+                except Exception:
+                    qty = 1
+
+                conf_val = p.get("confidence")
+                try:
+                    if conf_val is None:
+                        conf = 0.8
+                    else:
+                        conf = float(conf_val)
+                except Exception:
+                    conf = 0.8
+
+                len_val = p.get("length_m")
+                try:
+                    if len_val is not None:
+                        len_val = float(len_val)
+                except Exception:
+                    len_val = None
+                
                 try:
                     # DetectedProfile is a dataclass, so we pass correct kwargs
                     profiles.append(DetectedProfile(
                         id=p.get("repere") or p.get("id", "P000"),
                         type=p.get("category", p.get("type", "unknown")),
-                        designation=p.get("designation", ""),
-                        role=p.get("role", ""),
-                        length_m=p.get("length_m"),
-                        length_source=p.get("length_source", ""),
-                        quantity=int(p.get("quantity") or 1),
-                        quantity_note=p.get("quantity_note", ""),
-                        zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else p.get("zone", ""),
-                        confidence=float(p.get("confidence", 0.8)),
-                        bbox_normalized=p.get("bbox_normalized", [])
+                        designation=p.get("designation") or "",
+                        role=p.get("role") or "",
+                        length_m=len_val,
+                        length_source=p.get("length_source") or "",
+                        quantity=qty,
+                        quantity_note=p.get("quantity_note") or "",
+                        zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else (p.get("zone") or ""),
+                        confidence=conf,
+                        bbox_normalized=p.get("bbox_normalized") or []
                     ))
                 except Exception as e:
                     logger.warning(f"Skipping invalid profile: {e}")
@@ -131,7 +181,7 @@ class TextLLMEngine:
                     else:
                         warns.append(str(w))
             else:
-                warns = data.get("warnings", [])
+                warns = data.get("warnings", []) or []
 
             return VisionResult(
                 scale_detected=data.get("scale_detected"),
@@ -230,7 +280,7 @@ class TextLLMEngine:
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not set")
         api_key = api_key.strip()
-        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct:free")
+        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct")
         logger.info(f"Sending text to OpenRouter API (model: {model})...")
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {"model": model, "max_tokens": 3000, "messages": [{"role": "user", "content": [{"type": "text", "text": SYSTEM_PROMPT + "\n\n" + user_msg}]}]}
@@ -242,6 +292,54 @@ class TextLLMEngine:
         data = resp.json()
         if "choices" not in data or not data["choices"]:
             raise ValueError(f"OpenRouter returned empty choices: {data}")
+        raw_json = data["choices"][0]["message"]["content"]
+        raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        return raw_json
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def _call_openai_text(self, user_msg: str) -> str:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+        import requests
+        logger.info(f"Sending text to OpenAI API (model: {model})...")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "max_tokens": 4096,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": user_msg
+                }
+            ]
+        }
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=300
+        )
+        if not resp.ok:
+            error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        data = resp.json()
+        if "choices" not in data or not data["choices"]:
+            raise ValueError(f"OpenAI returned empty choices: {data}")
+            
         raw_json = data["choices"][0]["message"]["content"]
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
