@@ -214,6 +214,22 @@ def _check_demo_mock(pdf_path: str, filename: str, project: str) -> dict | None:
             with open(mock_file, 'r', encoding='utf-8') as mf:
                 data = json.load(mf)
             
+            if "padel" in mock_file.lower():
+                dessinateur = "LAMZF"
+                date_plan = "06/02/2025"
+                scale_detected = "1:50"
+                len_src = "mock_padel"
+            elif "usine" in mock_file.lower():
+                dessinateur = "MIRE"
+                date_plan = "04/06/2026"
+                scale_detected = "1:100"
+                len_src = "mock_usine"
+            else:  # ESCABEAU
+                dessinateur = "MIRE"
+                date_plan = "11/11/2025"
+                scale_detected = "1:50"
+                len_src = "mock_escabeau"
+
             profiles_raw = []
             for p in data.get('profiles', []):
                 dp = DetectedProfile(
@@ -222,7 +238,7 @@ def _check_demo_mock(pdf_path: str, filename: str, project: str) -> dict | None:
                     designation=p.get('designation') or '',
                     role=p.get('role') or '',
                     length_m=p.get('length_m'),
-                    length_source='mock',
+                    length_source=len_src,
                     quantity=int(p.get('quantity', 1)),
                     zone=p.get('zone') or '',
                     confidence=float(p.get('confidence') or 0.99),
@@ -242,19 +258,6 @@ def _check_demo_mock(pdf_path: str, filename: str, project: str) -> dict | None:
             total_weight = sum(p.poids_total_kg for p in profiles_out if p.poids_total_kg is not None)
             needs_review = sum(1 for p in profiles_out if p.confidence < 0.7)
             
-            if "PADEL" in mock_file:
-                dessinateur = "LAMZF"
-                date_plan = "06/02/2025"
-                scale_detected = "1:50"
-            elif "USINE" in mock_file:
-                dessinateur = "MIRE"
-                date_plan = "04/06/2026"
-                scale_detected = "1:100"
-            else:  # ESCABEAU
-                dessinateur = "MIRE"
-                date_plan = "11/11/2025"
-                scale_detected = "1:50"
-                
             final_metadata = {
                 "entreprise": "SINERTECH",
                 "dessinateur": dessinateur,
@@ -741,9 +744,10 @@ def _enrich_profile(p: Any) -> ProfileOut:
     p_punit = getattr(p, 'poids_unitaire', None)
     p_mlin = getattr(p, 'masse_lineaire_kg_m', None)
     p_surf = getattr(p, 'surface_peinture_m2', None)
-    p_meth = getattr(p, 'methode', 'mock' if getattr(p, 'length_source', '') == 'mock' else None)
+    len_src = getattr(p, 'length_source', '')
+    p_meth = getattr(p, 'methode', 'mock' if len_src.startswith('mock') else None)
     
-    if getattr(p, 'length_source', '') == 'mock':
+    if len_src == 'mock_escabeau':
         return ProfileOut(
             id=p.id,
             designation=p.designation,
