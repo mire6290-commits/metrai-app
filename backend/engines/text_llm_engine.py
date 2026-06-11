@@ -281,6 +281,8 @@ class TextLLMEngine:
             raise ValueError("OPENROUTER_API_KEY not set")
         api_key = api_key.strip()
         model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct")
+        if model and model.endswith(":free"):
+            model = model[:-5]
         logger.info(f"Sending text to OpenRouter API (model: {model})...")
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {"model": model, "max_tokens": 3000, "messages": [{"role": "user", "content": [{"type": "text", "text": SYSTEM_PROMPT + "\n\n" + user_msg}]}]}
@@ -296,7 +298,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
     def _call_openai_text(self, user_msg: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:

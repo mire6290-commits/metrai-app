@@ -236,7 +236,7 @@ class VisionLLMEngine:
         except Exception as e:
             raise ValueError(f"Unexpected Gemini response format: {data}") from e
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
     def _call_openai(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -307,6 +307,8 @@ class VisionLLMEngine:
         
         import requests
         model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct")
+        if model and model.endswith(":free"):
+            model = model[:-5]
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
