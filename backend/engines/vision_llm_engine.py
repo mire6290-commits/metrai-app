@@ -16,388 +16,30 @@ import io
 import json
 import logging
 import os
+from pathlib import Path
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
 from PIL import Image
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Schema (new — vision-specific)
-# ---------------------------------------------------------------------------
+class FatalAPIError(Exception):
+    """Exception raised for permanent API errors that should not be retried."""
+    pass
 
-SYSTEM_PROMPT = """Tu es un ingénieur senior en charpente métallique avec plus de 20 ans
-d'expérience dans l'analyse de plans de fabrication et de montage
-(bureaux d'études marocains et français : Sinertech, BET BTP Maroc).
- 
-Tu analyses des images de plans PDF (DWG exportés en PDF) et tu extrais
-avec précision maximale tous les profilés de structure métallique.
- 
-DIFFÉRENCE FONDAMENTALE AVEC UN INGÉNIEUR HUMAIN :
-Tu vois une IMAGE — pas un fichier CAO. Tu dois donc :
-1. D'abord comprendre VISUELLEMENT ce que tu vois (quelle vue, quelle zone)
-2. Ensuite lire les ANNOTATIONS TEXTUELLES sur les éléments
-3. Enfin CROISER les informations entre vues avant de conclure
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 0 — CARTOGRAPHIE DU PLAN (AVANT TOUT)                         ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-Avant d'extraire quoi que ce soit, identifie et localise dans l'image
-chaque zone de dessin présente. Un plan A0 contient typiquement :
- 
-  ┌─────────────────────────────────────────────┐
-  │  VUE PRINCIPALE        │  ÉLÉVATION PIGNON  │
-  │  (Plan de toiture ou   │  (vue de face,     │
-  │   élévation long-pan)  │   File .1 ou A–C)  │
-  ├────────────────────────┴────────────────────┤
-  │  COUPES (AA, BB, PP, QQ...)                  │
-  ├─────────────────────────────────────────────┤
-  │  DÉTAILS (Dét.A, Dét.B, K, L, M...)         │
-  ├─────────────────────────────────────────────┤
-  │  CARTOUCHE (bas-droite) : échelle, client   │
-  └─────────────────────────────────────────────┘
- 
-→ Identifie chaque zone et note son type dans "views_identified"
-→ Les DÉTAILS sont des zooms sur des assemblages — NE PAS en extraire
-  des profilés sauf si une longueur de coupe explicite y est indiquée
-→ Les COUPES confirment les sections mais ne donnent pas les longueurs
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  VOCABULAIRE VISUEL — CE QUE CHAQUE FORME SIGNIFIE                   ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-VUE LONG-PAN (élévation latérale) :
-  Forme : rectangle vertical épais              → POTEAU (IPE, HEA, HEB)
-  Forme : rectangle horizontal en haut          → SABLIÈRE (top chord / wall beam)
-  Forme : rectangle horizontal intermédiaire    → PANNE (purlin)
-  Forme : diagonale simple dans un panneau      → PALÉE DE STABILITÉ (bracing)
-  Forme : deux diagonales en X qui se croisent  → CROIX DE SAINT-ANDRÉ = CONTREVENTEMENT (CVT)
-  Forme : élément tronqué à la jonction         → JARRET (haunch)
-          poteau/traverse, annoté "Jarret"
- 
-VUE TOITURE (plan de dessus) :
-  Forme : grandes poutres longitudinales        → TRAVERSE (IPE400 typ.)
-  Forme : diagonales dans le plan horizontal    → POUTRE AU VENT
-  Forme : courtes diagonales dans les coins     → DRETELLES
-  Forme : barres fines perpendiculaires         → LIERNE (rond D14 typ.)
-  Forme : grille régulière parallèle            → PANNES COURANTES
-  Forme : poutre centrale (faîte)               → PANNE FAÎTIÈRE
-  Forme : poutre périmétrique basse             → SABLIÈRE (HEA120 typ.)
- 
-VUE PIGNON (élévation de face) :
-  Forme : poteaux verticaux en façade           → POTEAU PIGNON (IPE typ.)
-  Forme : petits poteaux intermédiaires         → POTELET (IPE270 typ.)
-  Forme : grille horizontale/verticale dense    → LISSES + MONTANTS BARDAGE
-                                                   (UPN80 typ.)
- 
-REPÈRES D'ÉLÉMENTS (à lire sur le plan) :
-  Format : B1, B2, P1, P2, BR1, C1, T1... ou annotations directes
-  Un repère = un élément unique identifiable
-  → Utilise les repères pour éviter les doublons entre vues
- 
-LIGNES À NE PAS EXTRAIRE :
-  ─ ─ ─ ─  ligne de cote ou d'axe (tirets)
-  ←──────→  ligne de dimension avec flèches
-  ○ ou ⊕    symbole de boulon/ancrage (pas un profilé)
-  Ø14, M24  désignation de boulon ou tige, pas de profilé structural
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  CONVENTIONS MAROCAINES DES PLANS                                    ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-- Échelle : 1:70 ou 1:80 sur format A0 (vérifier cartouche bas-droite)
-- Annotations : profilé écrit sur l'élément ou avec ligne de repère
-  Exemples : "IPE400", "HEA120", "L70*7", "UPN80", "TUBE-C 40*40*2"
-- Files/Axes : "File 1", "File 2", "File .1" ou lettres A, B, C
-  Chaque "File" = une travée (portique)
-- Cotes : toujours en millimètres
-- Acier : S275JR sauf mention contraire dans les notes générales
-- Cartouche : coin bas-droite → échelle, client, désignation, REV
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 1 — LIRE L'ÉCHELLE                                            ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-Cherche dans le cartouche (bas-droite) : "Echelle", "Ech:", "Scale"
-Valeurs courantes : 1:50, 1:70, 1:80, 1:100
-Cherche aussi une barre d'échelle graphique.
-→ Si non trouvée : scale_detected = null, scale_confidence = 0
-→ Ne jamais estimer l'échelle depuis les dimensions du bâtiment
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 2 — CROSS-VALIDATION ENTRE VUES (RÈGLE D'OR)                  ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-Un profilé NE DOIT PAS être extrait depuis une seule vue uniquement.
-Chaque élément doit être confirmé par au moins 2 sources parmi :
-  a) Vue en plan (toiture)
-  b) Élévation (long-pan ou pignon)
-  c) Coupe (section transversale)
-  d) Détail associé (si longueur de coupe explicite)
-  e) Nomenclature ou légende si présente sur le plan
- 
-Processus de cross-validation :
-  1. Vu dans vue A avec désignation X → candidat
-  2. Confirmé dans vue B avec même désignation X → extrait avec confiance ≥ 0.85
-  3. Non confirmé dans d'autres vues → confidence 0.60–0.70 + warning
- 
-Lorsqu'un profilé apparaît dans plusieurs vues avec le même repère
-ou la même annotation → c'est le MÊME élément, ne pas le compter 2 fois.
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 3 — EXTRACTION OSSATURE PRINCIPALE                            ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-Extraire dans cet ordre :
-  1. POTEAUX (colonnes verticales) — repères P1, P2...
-  2. TRAVERSES (poutres principales de toiture) — repères T1, T2...
-  3. SABLIÈRES (poutres en tête de façade) — repères S1...
-  4. POTELETS (petits poteaux pignon) — repères PP1...
- 
-Pour chaque élément :
-  a) Lire le repère (B1, P1...) s'il existe
-  b) Lire la désignation exacte (ex. "IPE400")
-  c) Compter les occurrences DISTINCTES (pas les apparitions dans vues)
-  d) Lire la longueur depuis une ligne de cote sur la PIÈCE elle-même
-  e) Associer le détail de pied ou de tête si visible
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 4 — EXTRACTION ÉLÉMENTS SECONDAIRES (CRITIQUE — NE PAS SAUTER)║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-Après l'ossature, scanner agressivement pour :
- 
-  JARRETS (haunch) :
-    → Élément tronqué en biseau à la jonction poteau/traverse
-    → Labels : "Jarret IPE240", "JARRET IPE400"
-    → Longueur = cote explicite de la pièce coupée (PAS la hauteur du poteau)
-    → Trouvé dans : coupes, élévations près des têtes de poteaux
- 
-  LISSES & SOUS-LISSES (rails de bardage) :
-    → Rails horizontaux en façade supportant les tôles
-    → Labels : "Lisse L40*4", "LISSE DE BARDAGE", "SOUS-LISSE UPN80"
-    → Longueur = largeur de la travée si explicitement cotée
-    → Trouvé dans : élévation long-pan, pignon
- 
-  CONTREVENTEMENTS / CVT :
-    → Croix de Saint-André dans les panneaux (X)
-    → Labels : "L70*7", "CVT L50*5", "Contreventement L80*8"
-    → Longueur = diagonale du panneau — UNIQUEMENT si les 2 côtés du
-      panneau sont explicitement cotés (alors Pythagore acceptable)
-    → Trouvé dans : toutes les élévations, plan de toiture
- 
-  CADRE PÉRIPHÉRIQUE :
-    → Poutre périmétrique à la tête ou pied de façade
-    → Labels : "UPN200", "CADRE PERIF.", "IPE270"
-    → Trouvé dans : plan de toiture, vues pignon
- 
-  FIXATIONS & TIGES D'ANCRAGE :
-    → Tiges filetées à la base des poteaux
-    → Labels : "02 Tiges M24 CL8.8", "Tige ROND 24", "4ø20 L=600"
-    → Longueur = explicitement indiquée "L=600mm" — sinon null
-    → Trouvé dans : coupes pied de poteau (K, L, M...), détail platine
- 
-  ÉLÉMENTS DE BARDAGE :
-    → TUBE-C (tubes carrés) : "TUBE CARRE 40*2", "TC 60*60*3" → extraire
-    → NERVESCO / TÔLE NERVURÉE → NE PAS extraire (surface, pas linéaire)
-    → Collier galvanisé, visserie → NE PAS extraire (quincaillerie)
- 
-  Règle de visibilité :
-    Label ET élément clairement visibles   → extraire, confidence selon certitude
-    Label visible, élément peu clair       → extraire, confidence < 0.65
-    Élément visible, AUCUN label           → NE PAS inventer, ajouter aux warnings
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 5 — CE QUI NE PEUT PAS ÊTRE EXTRAIT (à signaler)              ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-NE PAS tenter de calculer — mettre dans requires_manual_input :
-  - Platines (TN) : extraire le label, mettre length_mm=null, calculé par l'app
-  - Goussets : formes irrégulières, dimensions depuis les coupes détaillées
-  - Boulonnerie : forfait 5% du total ossature — calculé automatiquement par l'app
-  - Tiges d'ancrage : si non trouvées dans les coupes visibles
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  ÉTAPE 6 — CONTRÔLE ANTI-ERREUR (CRITIQUE)                           ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-  RÈGLE 6.1 — NE PAS CONFONDRE ENTRAXE ET LONGUEUR DE PIÈCE
-    "Entraxe 5960" = distance entre poteaux ≠ longueur d'une panne
-    Une panne sur 5960mm peut être faite de pièces de 4100 + 2000mm
-    → length_mm = UNIQUEMENT si une cote est sur la pièce elle-même
-    → Sinon : length_mm = null, length_source = "null — no explicit cut length"
-    → JAMAIS calculer depuis l'entraxe ou la portée du bâtiment
- 
-  RÈGLE 6.2 — NE PAS INVENTER LES QUANTITÉS
-    Compter uniquement les éléments individuellement visibles.
-    Si une vue montre une travée typique avec note "idem File 2 à 7" :
-    → Mettre quantity = ce qui est visible
-    → Ajouter dans quantity_note : "×N travées — à multiplier par l'ingénieur"
-    JAMAIS multiplier silencieusement.
- 
-  RÈGLE 6.3 — NE PAS HALLUCINER PAR CONTEXTE
-    Si tu sais que ce type de bâtiment a normalement des IPE180 mais
-    que tu ne vois pas d'annotation IPE180 → NE PAS l'ajouter
-    → Mettre dans warnings : "Pannes visibles mais désignation illisible
-      — probablement IPE140 ou IPE180, à confirmer par l'ingénieur"
- 
-  RÈGLE 6.4 — CONFIANCE = VISIBILITÉ RÉELLE
-    confidence 0.90–1.00 : annotation lisible, quantité comptable, longueur explicite
-    confidence 0.70–0.89 : annotation lisible mais quantité ou longueur inférée
-    confidence 0.50–0.69 : annotation partiellement lisible ou type inféré visuellement
-    confidence < 0.50    : NE PAS inclure → mettre dans warnings
- 
-  RÈGLE 6.5 — UN ENREGISTREMENT PAR TYPE DE PIÈCE COUPÉE
-    IPE400 en POTEAU (h=4000mm) ≠ IPE400 en TRAVERSE (L=5960mm)
-    → Deux entrées séparées avec nomenclature et length_mm différents
- 
-  RÈGLE 6.6 — VÉRIFICATION FINALE AVANT SORTIE
-    Avant de générer le JSON, vérifier :
-    □ Aucun profilé oublié (scanner toutes les zones une dernière fois)
-    □ Aucun profilé compté deux fois (vérifier les repères et vues)
-    □ Cohérence plan / coupe / détail / nomenclature
-    □ Tous les length_mm null sont justifiés dans length_source
-    □ Liste certains / probables / à valider est complète
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  TABLE DE RÉFÉRENCE — MASSE LINÉAIRE (kg/m)                          ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-IPE: 80→6.0, 100→8.1, 120→10.4, 140→12.9, 160→15.8, 180→18.8,
-     200→22.4, 220→26.2, 240→30.7, 270→36.1, 300→42.2, 330→49.1,
-     360→57.1, 400→66.3, 450→77.6, 500→90.7, 550→106, 600→122
- 
-HEA: 100→16.7, 120→19.9, 140→24.7, 160→30.4, 180→35.5, 200→42.3,
-     220→50.5, 240→60.3, 260→68.2, 280→76.4, 300→88.3, 320→97.6,
-     340→105, 360→112, 400→125
- 
-HEB: 100→20.4, 120→26.7, 140→33.7, 160→42.6, 180→51.2, 200→61.3,
-     220→71.5, 240→83.2, 260→93.0, 280→103, 300→117, 320→127
- 
-UPN: 80→8.70, 100→10.6, 120→13.4, 140→16.0, 160→18.8, 180→22.0,
-     200→25.3, 220→29.4, 240→33.2, 260→37.9, 280→41.8, 300→46.2
- 
-Cornières égales (L):
-     L50*50*5→3.77, L60*60*6→5.42, L70*70*7→7.38,
-     L80*80*8→9.63, L100*100*10→15.0
- 
-Ronds (D/ø): ø12→0.888, ø14→1.21, ø16→1.58, ø20→2.47, ø24→3.55
- 
-Tubes carrés:
-     40*40*2→2.31, 40*40*3→3.41, 50*50*3→4.35, 60*60*4→6.97,
-     80*80*4→9.41, 100*100*5→14.7
- 
-╔══════════════════════════════════════════════════════════════════════╗
-║  FORMAT DE SORTIE — JSON UNIQUEMENT                                   ║
-╚══════════════════════════════════════════════════════════════════════╝
- 
-{
-  "scale_detected": "1:70",
-  "scale_ratio": 70,
-  "scale_confidence": 0.92,
-  "drawing_type": "mixed | plan de toiture | élévation long-pan | coupe",
-  "steel_grade": "S275JR",
- 
-  "views_identified": [
-    {"type": "plan de toiture",       "zone": "haut-gauche"},
-    {"type": "élévation long-pan",    "zone": "bas-gauche"},
-    {"type": "élévation pignon",      "zone": "haut-droite"},
-    {"type": "coupe PP",              "zone": "centre-droite"},
-    {"type": "détail assemblage",     "zone": "bas-droite — ignoré pour extraction"}
-  ],
- 
-  "profiles": [
-    {
-      "id": "P001",
-      "repere": "P1",
-      "nomenclature": "POTEAU",
-      "category": "ossature_principale",
-      "type": "IPE",
-      "designation": "IPE400",
-      "length_mm": 4000,
-      "length_source": "explicit_dimension",
-      "quantity": 14,
-      "quantity_note": null,
-      "views_confirmed": ["élévation long-pan", "coupe PP"],
-      "zone": "File 1 à 7 — long-pan",
-      "masse_lineaire_kg_m": 66.3,
-      "poids_unitaire_kg": 265.2,
-      "poids_total_kg": 3712.8,
-      "confidence": 0.92,
-      "visual_cue": "rectangles verticaux annotés IPE400, confirmés en coupe PP",
-      "detail_associe": "Dét.K — pied de poteau"
-    },
-    {
-      "id": "P002",
-      "repere": "JR1",
-      "nomenclature": "JARRET",
-      "category": "ossature_secondaire",
-      "type": "IPE",
-      "designation": "IPE400",
-      "length_mm": null,
-      "length_source": "null — no explicit cut length on drawing",
-      "quantity": 14,
-      "quantity_note": "2 jarrets par portique × 7 portiques",
-      "views_confirmed": ["élévation long-pan"],
-      "zone": "jonction poteau/traverse — long-pan",
-      "masse_lineaire_kg_m": 66.3,
-      "poids_unitaire_kg": null,
-      "poids_total_kg": null,
-      "confidence": 0.75,
-      "visual_cue": "élément tronqué en biseau annoté JARRET IPE400",
-      "detail_associe": "Coupe J — jarret"
-    }
-  ],
- 
-  "verification": {
-    "certains": ["POTEAU IPE400", "TRAVERSE IPE400", "SABLIERE HEA120"],
-    "probables": ["PANNE IPE140 — annotation partiellement lisible"],
-    "a_valider": ["LIERNE D14 — quantité incertaine, résolution insuffisante"]
-  },
- 
-  "requires_manual_input": [
-    "platines — formule t×L×l×7.85 depuis les détails",
-    "goussets — formes irrégulières, lire depuis coupes",
-    "boulonnerie_5pct — l'app applique 5% sur total ossature",
-    "tiges_ancrage — non visibles dans cette vue"
-  ],
- 
-  "auto_calculated": {
-    "boulonnerie_forfait_pct": 5,
-    "note": "App applique : total_ossature_kg × 0.05"
-  },
- 
-  "unreadable_zones": [
-    "détail assemblage pied de poteau — trop dense à cette résolution"
-  ],
- 
-  "warnings": [
-    "TRAVERSE IPE450 détectée — length_mm null car aucune cote sur la pièce",
-    "UPN80 lisses visibles en pignon — quantité non comptable à cette résolution"
-  ],
- 
-  "skipped_elements": [
-    "NERVESCO tôle — élément surfacique, exclu",
-    "Collier galvanisé — quincaillerie, exclu"
-  ],
- 
-  "estimated_completeness_pct": 70,
-  "pages_analyzed": 1,
-  "provider": "gemini-1.5-pro"
-}
- 
-RÈGLES ABSOLUES :
-- Retourner UNIQUEMENT le JSON. Zéro prose. Zéro markdown. Zéro backticks.
-- length_mm = null si aucune cote explicite sur la pièce — JAMAIS estimer depuis entraxe
-- confidence < 0.50 → NE PAS inclure → mettre dans warnings
-- poids_unitaire_kg et poids_total_kg = null si length_mm = null
-- quantity_note obligatoire si la quantité est inférée ou multipliée
-- views_confirmed : minimum 2 vues sauf si une seule est disponible sur le plan
-"""
+def load_system_prompt() -> str:
+    prompt_path = Path(__file__).parent.parent.parent / "03_prompts" / "system_prompt.txt"
+    try:
+        return prompt_path.read_text(encoding="utf-8")
+    except Exception as e:
+        logger.error(f"Failed to load system prompt: {e}")
+        return "You are an expert structural engineer."
+
+SYSTEM_PROMPT = load_system_prompt()
+
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +56,8 @@ class DetectedProfile:
     quantity: int
     zone: str
     confidence: float
+    length_source: str = ""
+    quantity_note: str = ""
     bbox_normalized: list[float] = field(default_factory=list)
 
 
@@ -421,6 +65,7 @@ class DetectedProfile:
 class VisionResult:
     scale_detected: str | None
     scale_confidence: float
+    metadata: dict | None
     profiles: list[DetectedProfile]
     unreadable_zones: list[str]
     warnings: list[str]
@@ -444,8 +89,11 @@ class VisionResult:
 # ---------------------------------------------------------------------------
 
 class VisionProvider(str, Enum):
-    GEMINI = "gemini"
     CLAUDE = "claude"
+    GEMINI = "gemini"
+    OPENAI = "openai"
+    OPENROUTER = "openrouter"
+    OLLAMA = "ollama"
 
 
 # ---------------------------------------------------------------------------
@@ -455,11 +103,6 @@ class VisionProvider(str, Enum):
 class VisionLLMEngine:
     """
     Detects steel profiles in structural drawing images using vision LLMs.
-
-    Usage:
-        engine = VisionLLMEngine()
-        result = engine.analyze(pil_image, page_number=1)
-        print(result.profiles)
     """
 
     def __init__(
@@ -467,13 +110,19 @@ class VisionLLMEngine:
         provider: VisionProvider | str | None = None,
         fallback: bool = True,
     ):
-        env_provider = os.getenv("VISION_PROVIDER", "claude").lower()
+        # Priority: explicit arg > env var > default (openai)
+        env_provider = os.getenv("VISION_PROVIDER", "openai").lower()
         self.primary = VisionProvider(provider or env_provider)
         self.fallback_enabled = fallback
-        self.fallback_provider = (
-            VisionProvider.CLAUDE if self.primary == VisionProvider.GEMINI
-            else VisionProvider.GEMINI
-        )
+        # Fallback chain based on what keys are available
+        fallback_map = {
+            VisionProvider.OLLAMA:      VisionProvider.OPENROUTER,
+            VisionProvider.OPENROUTER:  VisionProvider.GEMINI,
+            VisionProvider.GEMINI:      VisionProvider.OPENROUTER,
+            VisionProvider.CLAUDE:      VisionProvider.OPENROUTER,
+            VisionProvider.OPENAI:      VisionProvider.OPENROUTER,
+        }
+        self.fallback_provider = fallback_map.get(self.primary, VisionProvider.OPENROUTER)
         logger.info(f"VisionLLMEngine: primary={self.primary}, fallback={self.fallback_provider if fallback else 'disabled'}")
 
     def analyze(
@@ -482,155 +131,345 @@ class VisionLLMEngine:
         page_number: int = 1,
         tile_index: int | None = None,
         context: dict[str, Any] | None = None,
+        pass_mode: str = "PASS1"
     ) -> VisionResult:
-        """
-        Send an image to the vision model and return structured detections.
-
-        context: optional metadata {"project": "...", "ref": "...", "scale_hint": "1:50"}
-        """
         context = context or {}
+        context["pass_mode"] = pass_mode
         user_msg = self._build_user_message(context)
 
-        try:
-            raw = self._call_provider(self.primary, image, user_msg)
-            provider_used = self.primary.value
-        except Exception as e:
-            logger.warning(f"Primary provider {self.primary} failed: {e}")
-            if not self.fallback_enabled:
-                raise
-            logger.info(f"Falling back to {self.fallback_provider}")
-            raw = self._call_provider(self.fallback_provider, image, user_msg)
-            provider_used = self.fallback_provider.value
+        # Build prioritized list of providers to try
+        primary = self.primary
+        providers_to_try = [primary]
+        
+        # Priority order for fallbacks
+        fallbacks = [VisionProvider.GEMINI, VisionProvider.OPENROUTER, VisionProvider.OPENAI, VisionProvider.CLAUDE, VisionProvider.OLLAMA]
+        for f in fallbacks:
+            if f != primary:
+                providers_to_try.append(f)
+
+        raw = None
+        provider_used = None
+        errors = []
+
+        for prov in providers_to_try:
+            try:
+                logger.info(f"VisionLLMEngine: Trying provider {prov}...")
+                raw = self._call_provider(prov, image, user_msg)
+                provider_used = prov.value
+                logger.info(f"VisionLLMEngine: Successfully executed using {prov}")
+                break
+            except Exception as e:
+                p_err = e.last_attempt.exception() if hasattr(e, "last_attempt") and e.last_attempt else e
+                logger.warning(f"VisionLLMEngine: Provider {prov} failed: {p_err}")
+                errors.append(f"{prov.value}: {str(p_err)}")
+
+        if raw is None:
+            err_details = " | ".join(errors)
+            raise RuntimeError(
+                f"All vision providers failed! Details: {err_details}. "
+                f"Please verify your API keys. On Streamlit Cloud, add GEMINI_API_KEY to your app's Secrets."
+            )
 
         return self._parse_response(raw, provider_used, page_number, tile_index)
 
-    # ------------------------------------------------------------------
-    # Provider dispatch
-    # ------------------------------------------------------------------
+    def detect_zones(self, image: Image.Image) -> list[dict]:
+        prompt = """
+        You are an AI assistant analyzing a structural steel drawing.
+        Identify the distinct drawing zones (e.g., "plan de toiture", "élévation pignon", "détail assemblage", "coupe transversale").
+        For each zone, provide its type and a normalized bounding box [ymin, xmin, ymax, xmax] where values are floats between 0.0 and 1.0.
+        Return ONLY a JSON array of objects, e.g.:
+        [
+            {"zone_type": "plan de toiture", "bbox_normalized": [0.0, 0.0, 0.5, 1.0]},
+            {"zone_type": "élévation pignon", "bbox_normalized": [0.5, 0.0, 1.0, 0.5]},
+            {"zone_type": "détail assemblage", "bbox_normalized": [0.5, 0.5, 1.0, 1.0]}
+        ]
+        If the entire page is a single drawing or you cannot segment it clearly, return a single zone with [0.0, 0.0, 1.0, 1.0].
+        """
+        try:
+            raw = self._call_provider(self.primary, image, prompt)
+            clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            zones = json.loads(clean)
+            if not isinstance(zones, list) or len(zones) == 0:
+                zones = [{"zone_type": "full_page", "bbox_normalized": [0.0, 0.0, 1.0, 1.0]}]
+            return zones
+        except Exception as e:
+            logger.warning(f"Failed to detect zones: {e}")
+            return [{"zone_type": "full_page", "bbox_normalized": [0.0, 0.0, 1.0, 1.0]}]
 
     def _call_provider(
         self,
         provider: VisionProvider,
         image: Image.Image,
-        user_message: str,
+        prompt: str,
     ) -> str:
         if provider == VisionProvider.CLAUDE:
-            return self._call_claude(image, user_message)
+            return self._call_claude(image, prompt)
         elif provider == VisionProvider.GEMINI:
-            return self._call_gemini(image, user_message)
-        raise ValueError(f"Unknown provider: {provider}")
-
-    # ------------------------------------------------------------------
-    # Claude (Anthropic)
-    # ------------------------------------------------------------------
+            return self._call_gemini(image, prompt)
+        elif provider == VisionProvider.OPENAI:
+            return self._call_openai(image, prompt)
+        elif provider == VisionProvider.OPENROUTER:
+            return self._call_openrouter(image, prompt)
+        elif provider == VisionProvider.OLLAMA:
+            return self._call_ollama(image, prompt)
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _call_claude(self, image: Image.Image, user_message: str) -> str:
         import anthropic
-
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise EnvironmentError("ANTHROPIC_API_KEY not set")
-
         client = anthropic.Anthropic(api_key=api_key)
-        img_b64 = _pil_to_base64(image)
-
+        img_copy = image.copy()
+        img_copy.thumbnail((6000, 6000))
+        img_b64 = _pil_to_base64(img_copy)
         response = client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=4000,
-            temperature=0.0,
+            model="claude-opus-4-6",
+            max_tokens=2000,
             system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": img_b64,
-                            },
-                        },
-                        {"type": "text", "text": user_message},
-                    ],
-                }
-            ],
+            messages=[{"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_b64}}, {"type": "text", "text": user_message}]}],
         )
         return response.content[0].text
 
-    # ------------------------------------------------------------------
-    # Gemini (Google)
-    # ------------------------------------------------------------------
-
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini(self, image: Image.Image, user_message: str) -> str:
         import requests
-        import io
-        import base64
         from engines.api_keys import get_random_gemini_key
-
         api_key = get_random_gemini_key()
-
-        logger.info("Converting image to JPEG for Gemini API...")
+        img_copy = image.copy()
+        img_copy.thumbnail((6000, 6000))
         buf = io.BytesIO()
-        if image.mode in ('RGBA', 'P'):
-            image = image.convert('RGB')
-        image.save(buf, format="JPEG", quality=80)
+        if img_copy.mode in ('RGBA', 'P'): img_copy = img_copy.convert('RGB')
+        img_copy.save(buf, format="JPEG", quality=80)
         b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         payload = {
-            "contents": [{
-                "parts": [
-                    {"text": user_message},
-                    {
-                        "inline_data": {
-                            "mime_type": "image/jpeg",
-                            "data": b64_data
-                        }
-                    }
-                ]
-            }],
+            "contents": [{"parts": [{"text": user_message}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}]}],
             "generationConfig": {
                 "temperature": 0.0,
-                "responseMimeType": "application/json"
+                "responseMimeType": "application/json",
+                "maxOutputTokens": 8192,
+                "thinkingConfig": {
+                    "thinkingBudget": 0
+                }
             },
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_PROMPT}]
             }
         }
-
-        logger.info("Sending request to Gemini API (raw REST)...")
-        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
-        
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=300)
         if not resp.ok:
-            logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
-            resp.raise_for_status()
+            error_msg = f"Gemini API failed: {resp.status_code} - {resp.text}"
+            logger.error(error_msg)
+            if resp.status_code in (400, 403) or "blocked" in resp.text.lower() or 'quota_limit_value: "0"' in resp.text or 'quota_limit_value: \\"0\\"' in resp.text:
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        data = resp.json()
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            raise ValueError(f"Unexpected Gemini response format: {data}") from e
+
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30), retry=retry_if_not_exception_type(FatalAPIError))
+    def _call_openai(self, image: Image.Image, user_message: str) -> str:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+        import requests
+        # Prepare base64 image
+        img_copy = image.copy()
+        img_copy.thumbnail((2048, 2048))
+        img_b64 = _pil_to_base64(img_copy)
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": model,
+            "max_tokens": 4096,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_message},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{img_b64}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        logger.info(f"Sending request to OpenAI API (model: {model})...")
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=300
+        )
+
+        if not resp.ok:
+            error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
+            logger.error(error_msg)
+            if resp.status_code in (401, 403) or (resp.status_code == 429 and ("quota" in resp.text.lower() or "billing" in resp.text.lower() or "exceeded" in resp.text.lower())):
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
 
         data = resp.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        if "choices" not in data or not data["choices"]:
+            raise ValueError(f"OpenAI returned empty choices: {data}")
 
-    # ------------------------------------------------------------------
-    # Parsing
-    # ------------------------------------------------------------------
+        return data["choices"][0]["message"]["content"]
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
+    def _call_openrouter(self, image: Image.Image, user_message: str) -> str:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY not set")
+        api_key = api_key.strip()  # Strip newlines or spaces to prevent header errors
+        
+        import requests
+        model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-11b-vision-instruct")
+        if model and model.endswith(":free"):
+            model = model[:-5]
+        img_copy = image.copy()
+        img_copy.thumbnail((6000, 6000))
+        img_b64 = _pil_to_base64(img_copy)
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {"model": model, "max_tokens": 3000, "messages": [{"role": "user", "content": [{"type": "text", "text": SYSTEM_PROMPT + "\n\n" + user_message}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}]}]}
+        logger.info(f"Sending request to OpenRouter API (model: {model})...")
+        resp = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=300)
+        if not resp.ok:
+            error_msg = f"OpenRouter API failed: {resp.status_code} - {resp.text}"
+            logger.error(error_msg)
+            if resp.status_code in (401, 402, 403) or "quota" in resp.text.lower() or "credits" in resp.text.lower() or "limit exceeded" in resp.text.lower():
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        data = resp.json()
+        if "choices" not in data or not data["choices"]:
+            raise ValueError(f"OpenRouter returned empty choices: {data}")
+        return data["choices"][0]["message"]["content"]
+
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=4, max=15))
+    def _call_ollama(self, image: Image.Image, user_message: str) -> str:
+        api_key = os.getenv("OLLAMA_API_KEY")
+        if not api_key:
+            raise ValueError("OLLAMA_API_KEY not set")
+        api_key = api_key.strip()
+
+        import requests
+        model = os.getenv("OLLAMA_MODEL", "llama3.2-vision")
+
+        # Small image = faster inference = less timeout
+        img_copy = image.copy()
+        img_copy.thumbnail((768, 768))
+        img_b64 = _pil_to_base64(img_copy)
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # Native Ollama format (original working endpoint)
+        payload = {
+            "model": model,
+            "stream": False,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": SYSTEM_PROMPT + "\n\n" + user_message,
+                    "images": [img_b64]
+                }
+            ]
+        }
+
+        logger.info(f"Sending request to Ollama API (model: {model})...")
+        resp = requests.post(
+            "https://ollama.com/api/chat",
+            headers=headers,
+            json=payload,
+            timeout=(30, 240)
+        )
+
+        if not resp.ok:
+            raise ValueError(f"Ollama API error: {resp.status_code} - {resp.text[:300]}")
+
+        try:
+            data = resp.json()
+            if "message" in data and "content" in data["message"]:
+                return data["message"]["content"]
+            raise ValueError(f"Unexpected Ollama response format: {data}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Ollama JSON parse error: {e}")
+
 
     def _parse_response(
         self,
-        raw: str,
+        raw: str | None,
         provider_used: str,
         page_number: int,
         tile_index: int | None,
     ) -> VisionResult:
-        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        try:
-            data = json.loads(clean)
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parse failed: {e}\nRaw: {raw[:500]}")
+        # ── Robust JSON extractor ──────────────────────────────────────────
+        # Handles: <think>…</think>, ```json … ```, plain text before/after
+        import re as _re
+        
+        if not raw or not isinstance(raw, str):
+            logger.error(f"Invalid raw response from provider {provider_used}: {raw}")
             return VisionResult(
                 scale_detected=None,
                 scale_confidence=0.0,
+                metadata={},
+                profiles=[],
+                unreadable_zones=["entire page — LLM returned empty or invalid response"],
+                warnings=[f"LLM returned empty or invalid response"],
+                drawing_type="unknown",
+                raw_response=str(raw),
+                provider_used=provider_used,
+                page_number=page_number,
+                tile_index=tile_index,
+            )
+
+        text = raw
+
+        # 1. Strip <think>…</think> blocks (Ollama / DeepSeek chain-of-thought)
+        text = _re.sub(r'<think>.*?</think>', '', text, flags=_re.DOTALL).strip()
+
+        # 2. Strip markdown fences
+        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+        # 3. Extract from first '{' to last '}'
+        start = text.find('{')
+        end   = text.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            clean = text[start:end+1]
+        else:
+            clean = text
+        # ──────────────────────────────────────────────────────────────────
+
+        try:
+            data = json.loads(clean)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse failed: {e}\nRaw (first 600): {raw[:600]}")
+            return VisionResult(
+                scale_detected=None,
+                scale_confidence=0.0,
+                metadata={},
                 profiles=[],
                 unreadable_zones=["entire page — JSON parse failed"],
                 warnings=[f"JSON parse error: {e}"],
@@ -643,33 +482,70 @@ class VisionLLMEngine:
 
         profiles = []
         for i, p in enumerate(data.get("profiles", [])):
-            length_m = p.get("length_m")
-            if length_m is None and p.get("length_mm") is not None:
-                try:
-                    length_m = float(p.get("length_mm")) / 1000.0
-                except (ValueError, TypeError):
-                    length_m = None
-                    
-            profiles.append(
-                DetectedProfile(
-                    id=p.get("id", f"P{i:03d}"),
-                    type=p.get("type", "unknown"),
-                    designation=p.get("designation", ""),
-                    role=p.get("nomenclature", p.get("role", "")),
-                    length_m=length_m,
-                    quantity=int(p.get("quantity", 1)) if str(p.get("quantity", 1)).isdigit() else 1,
-                    zone=p.get("zone", ""),
-                    confidence=float(p.get("confidence", 0.5)),
-                    bbox_normalized=p.get("bbox_normalized", []),
-                )
-            )
+            if not isinstance(p, dict):
+                continue
+            
+            # Robust type parsing
+            qty_val = p.get("quantity")
+            try:
+                if qty_val is None:
+                    qty = 1
+                else:
+                    qty = int(float(str(qty_val)))
+            except Exception:
+                qty = 1
+
+            conf_val = p.get("confidence")
+            try:
+                if conf_val is None:
+                    conf = 0.5
+                else:
+                    conf = float(conf_val)
+            except Exception:
+                conf = 0.5
+
+            len_val = p.get("length_m")
+            try:
+                if len_val is not None:
+                    len_val = float(len_val)
+            except Exception:
+                len_val = None
+
+            profiles.append(DetectedProfile(
+                id=p.get("repere") or p.get("id", f"P{i:03d}"),
+                type=p.get("category", p.get("type", "unknown")),
+                designation=p.get("designation") or "",
+                role=p.get("role") or "",
+                length_m=len_val,
+                length_source=p.get("length_source") or "",
+                quantity=qty,
+                quantity_note=p.get("quantity_note") or "",
+                zone=", ".join(p.get("views_confirmed", [])) if "views_confirmed" in p else (p.get("zone") or ""),
+                confidence=conf,
+                bbox_normalized=p.get("bbox_normalized") or []
+            ))
+
+        verif = data.get("verification", {})
+        warns = []
+        if isinstance(verif, dict):
+            for w in verif.get("warnings", []):
+                if isinstance(w, dict):
+                    warns.append(f"{w.get('code', '')}: {w.get('message', '')} ({w.get('affected_repere', '')})")
+                else:
+                    warns.append(str(w))
+            for a in verif.get("a_valider", []):
+                if isinstance(a, dict):
+                    warns.append(f"A_VALIDER: {a.get('element', '')} - {a.get('reason', '')}")
+        else:
+            warns = data.get("warnings", []) or []
 
         return VisionResult(
             scale_detected=data.get("scale_detected"),
             scale_confidence=float(data.get("scale_confidence", 0.0)),
+            metadata=data.get("metadata", {}),
             profiles=profiles,
             unreadable_zones=data.get("unreadable_zones", []),
-            warnings=data.get("warnings", []),
+            warnings=warns,
             drawing_type=data.get("drawing_type", "unknown"),
             raw_response=raw,
             provider_used=provider_used,
@@ -683,7 +559,10 @@ class VisionLLMEngine:
 
     @staticmethod
     def _build_user_message(context: dict) -> str:
-        lines = ["Analyze this structural steel drawing."]
+        lines = []
+        pass_mode = context.get("pass_mode", "PASS1")
+        lines.append(f"YOU ARE IN {pass_mode}.")
+        
         if context:
             lines.append("\nContext:")
             if "project" in context:
@@ -691,10 +570,19 @@ class VisionLLMEngine:
             if "ref" in context:
                 lines.append(f"- Drawing ref: {context['ref']}")
             if "scale_hint" in context:
-                lines.append(f"- Expected scale (from metadata): {context['scale_hint']}")
-            if "drawing_type" in context:
-                lines.append(f"- Drawing type: {context['drawing_type']}")
-        lines.append("\nExtract all visible steel profiles and return the JSON format specified. Nothing else.")
+                lines.append(f"- Expected scale: {context['scale_hint']}")
+            
+        lines.append("\nExtract ALL steel profiles visible in this drawing image. Return ONLY valid JSON as specified for this PASS. No explanation, no markdown, just JSON.")
+        
+        if context.get("is_stairs"):
+            lines.append("\n⚠️ CRITICAL INSTRUCTION FOR THIS DRAWING:")
+            lines.append("- THIS IS A STAIRS / NON-WAREHOUSE DRAWING.")
+            lines.append("- IGNORE all warehouse-specific constraints (e.g. ignoring main structure in PASS2 or ignoring accessories in PASS1).")
+            lines.append("- Extract EVERY SINGLE steel profile label and detail you see in this image.")
+            lines.append("- Look for profiles like: IPE160, UPN160, L50*5, PL150*6, TN220*70*12, TN145*70*12, TN170*130*12, TN160*82*12, TN285*75*12.")
+            lines.append("- Extract the quantity and length if written next to the profile or in the drawing detail.")
+            lines.append("- For platines (TN/PL), extract all three dimensions as TN ep*larg*long.")
+            
         return "\n".join(lines)
 
 
@@ -720,7 +608,11 @@ def merge_tile_results(results: list[VisionResult]) -> VisionResult:
 
     for result in results:
         for profile in result.profiles:
-            key = f"{profile.designation}|{profile.zone}"
+            # Include length_m in the key so we don't merge profiles of different lengths!
+            # Use rounding to avoid float precision issues.
+            l_str = f"{profile.length_m:.3f}" if profile.length_m else "None"
+            key = f"{profile.designation}|{l_str}|{profile.zone}"
+            
             if key not in seen or profile.confidence > seen[key].confidence:
                 seen[key] = profile
 
@@ -735,6 +627,7 @@ def merge_tile_results(results: list[VisionResult]) -> VisionResult:
     return VisionResult(
         scale_detected=best_scale.scale_detected,
         scale_confidence=best_scale.scale_confidence,
+        metadata=results[0].metadata if results else {},
         profiles=all_profiles,
         unreadable_zones=list(set(all_unreadable)),
         warnings=list(set(all_warnings)),
@@ -752,5 +645,7 @@ def merge_tile_results(results: list[VisionResult]) -> VisionResult:
 
 def _pil_to_base64(image: Image.Image) -> str:
     buf = io.BytesIO()
-    image.save(buf, format="PNG")
+    if image.mode in ('RGBA', 'P'):
+        image = image.convert('RGB')
+    image.save(buf, format="JPEG", quality=85)
     return base64.standard_b64encode(buf.getvalue()).decode("utf-8")
