@@ -65,8 +65,8 @@ class TextLLMEngine:
             providers_to_try.extend(["gemini", "openrouter"])
             
         raw_json = None
-        last_error = None
         used_provider = None
+        errors = []
 
         for prov in providers_to_try:
             try:
@@ -84,13 +84,13 @@ class TextLLMEngine:
                 break
             except Exception as e:
                 logger.warning(f"TextLLMEngine: Provider {prov} failed: {e}")
-                last_error = e
+                errors.append(f"{prov}: {str(e)}")
 
         if raw_json is None:
+            err_details = " | ".join(errors)
             raise RuntimeError(
-                f"All text LLM providers failed! Please verify that your API keys are set. "
-                f"On Streamlit Cloud, you must add GEMINI_API_KEY to your App's Secrets. "
-                f"Last error: {last_error}"
+                f"All text LLM providers failed! Details: {err_details}. "
+                f"Please verify your API keys. On Streamlit Cloud, add GEMINI_API_KEY to your app's Secrets."
             )
             
         # Parse JSON

@@ -148,8 +148,8 @@ class VisionLLMEngine:
                 providers_to_try.append(f)
 
         raw = None
-        last_error = None
         provider_used = None
+        errors = []
 
         for prov in providers_to_try:
             try:
@@ -161,13 +161,13 @@ class VisionLLMEngine:
             except Exception as e:
                 p_err = e.last_attempt.exception() if hasattr(e, "last_attempt") and e.last_attempt else e
                 logger.warning(f"VisionLLMEngine: Provider {prov} failed: {p_err}")
-                last_error = p_err
+                errors.append(f"{prov.value}: {str(p_err)}")
 
         if raw is None:
+            err_details = " | ".join(errors)
             raise RuntimeError(
-                f"All vision providers failed! Please verify that your API keys are set. "
-                f"On Streamlit Cloud, you must add GEMINI_API_KEY to your App's Secrets. "
-                f"Last error: {last_error}"
+                f"All vision providers failed! Details: {err_details}. "
+                f"Please verify your API keys. On Streamlit Cloud, add GEMINI_API_KEY to your app's Secrets."
             )
 
         return self._parse_response(raw, provider_used, page_number, tile_index)
