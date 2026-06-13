@@ -396,6 +396,7 @@ async def extract(
                 ]
                 
                 pass2_jsons = []
+                pass2_results = []
                 import fitz
                 page_doc = fitz.open(str(tmp_path))
                 page_obj = page_doc[page_num - 1]
@@ -429,6 +430,7 @@ async def extract(
                     await asyncio.sleep(sleep_time) # Prevent rate limits
                     res2 = vision_engine.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx+1, context=ctx2, pass_mode="PASS2")
                     pass2_jsons.append(res2.raw_response)
+                    pass2_results.append(res2)
                 
                 page_doc.close()
                 
@@ -446,10 +448,25 @@ async def extract(
                     all_results.append(merged_res)
                 except Exception as e:
                     logger.error(f"PASS 3 Failed: {e}. Falling back to Python merge.")
-                    # Fallback to Python merge if PASS 3 fails
-                    [res1]
-                    # We don't have the parsed pass2 objects here easily, so we just use res1
-                    all_results.append(res1)
+                    # Build a fallback VisionResult merging res1 and all res2 results
+                    merged_profiles = []
+                    merged_profiles.extend(res1.profiles)
+                    for r2 in pass2_results:
+                        merged_profiles.extend(r2.profiles)
+                        
+                    # Build merged result
+                    fallback_res = VisionResult(
+                        scale_detected=res1.scale_detected or (pass2_results[0].scale_detected if pass2_results else None),
+                        scale_confidence=res1.scale_confidence,
+                        metadata=res1.metadata,
+                        profiles=merged_profiles,
+                        unreadable_zones=res1.unreadable_zones,
+                        warnings=res1.warnings + [f"PASS 3 LLM failed: {str(e)}. Merged using Python fallback."],
+                        drawing_type=res1.drawing_type,
+                        raw_response=res1.raw_response,
+                        provider_used=res1.provider_used
+                    )
+                    all_results.append(fallback_res)
 
 
         if not all_results:
