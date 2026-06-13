@@ -5,7 +5,7 @@ from typing import Any
 from pathlib import Path
 
 # We keep the same data schema
-from engines.vision_llm_engine import DetectedProfile, VisionResult
+from engines.vision_llm_engine import DetectedProfile, VisionResult, FatalAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class TextLLMEngine:
             logger.error(f"Failed to parse JSON: {raw_json}")
             raise ValueError("LLM did not return valid JSON") from e
 
-    from tenacity import retry, stop_after_attempt, wait_exponential
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=2, max=6))
     def _call_ollama_text(self, user_msg: str) -> str:
@@ -242,7 +242,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini_text(self, user_msg: str) -> str:
         import requests
         from engines.api_keys import get_random_gemini_key
@@ -265,7 +265,10 @@ class TextLLMEngine:
         
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=300)
         if not resp.ok:
-            logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
+            error_msg = f"Gemini API failed: {resp.status_code} {resp.text}"
+            logger.error(error_msg)
+            if resp.status_code in (400, 403) or "blocked" in resp.text.lower() or 'quota_limit_value: "0"' in resp.text or 'quota_limit_value: \\"0\\"' in resp.text:
+                raise FatalAPIError(error_msg)
             resp.raise_for_status()
             
         data = resp.json()
@@ -273,7 +276,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openrouter_text(self, user_msg: str) -> str:
         import requests, os
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -290,6 +293,8 @@ class TextLLMEngine:
         if not resp.ok:
             error_msg = f"OpenRouter API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 402, 403) or "quota" in resp.text.lower() or "credits" in resp.text.lower() or "limit exceeded" in resp.text.lower():
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         if "choices" not in data or not data["choices"]:
@@ -298,7 +303,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openai_text(self, user_msg: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -336,6 +341,8 @@ class TextLLMEngine:
         if not resp.ok:
             error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 403) or (resp.status_code == 429 and ("quota" in resp.text.lower() or "billing" in resp.text.lower() or "exceeded" in resp.text.lower())):
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
             
         data = resp.json()

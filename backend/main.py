@@ -417,7 +417,7 @@ async def extract(
                     ctx2 = context.copy()
                     ctx2["zone_type"] = zt
                     
-                    sleep_time = 15.0 if req_provider == "openai" else 4.5
+                    sleep_time = 3.0 if req_provider == "openai" else 1.0
                     await asyncio.sleep(sleep_time) # Prevent rate limits
                     res2 = vision_engine.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx+1, context=ctx2, pass_mode="PASS2")
                     pass2_jsons.append(res2.raw_response)
@@ -432,7 +432,7 @@ async def extract(
                 ctx3["zone_type"] = "merge"
                 
                 try:
-                    sleep_time = 15.0 if req_provider == "openai" else 4.5
+                    sleep_time = 3.0 if req_provider == "openai" else 1.0
                     await asyncio.sleep(sleep_time)
                     merged_res = text_engine.analyze(pass3_payload, context=ctx3, pass_mode="PASS3")
                     all_results.append(merged_res)
@@ -622,7 +622,7 @@ async def extract_async(
                             ctx = context.copy()
                             ctx["zone_type"] = zt
                             
-                            sleep_time = 15.0 if req_provider == "openai" else 4.5
+                            sleep_time = 3.0 if req_provider == "openai" else 1.0
                             await asyncio.sleep(sleep_time)
                             res = vision_engine.analyze(crop_img, page_number=page_img.page_number, tile_index=z_idx, context=ctx)
                             zone_results.append(res)

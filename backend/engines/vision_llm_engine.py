@@ -22,9 +22,13 @@ from enum import Enum
 from typing import Any
 
 from PIL import Image
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
 logger = logging.getLogger(__name__)
+
+class FatalAPIError(Exception):
+    """Exception raised for permanent API errors that should not be retried."""
+    pass
 
 def load_system_prompt() -> str:
     prompt_path = Path(__file__).parent.parent.parent / "03_prompts" / "system_prompt.txt"
@@ -133,21 +137,34 @@ class VisionLLMEngine:
         context["pass_mode"] = pass_mode
         user_msg = self._build_user_message(context)
 
-        try:
-            raw = self._call_provider(self.primary, image, user_msg)
-            provider_used = self.primary.value
-        except Exception as primary_e:
-            p_err = primary_e.last_attempt.exception() if hasattr(primary_e, "last_attempt") and primary_e.last_attempt else primary_e
-            logger.warning(f"Primary provider {self.primary} failed: {p_err}")
-            if not self.fallback_enabled:
-                raise RuntimeError(f"Primary provider ({self.primary}) failed and fallback is disabled. Error: {p_err}")
-            logger.info(f"Falling back to {self.fallback_provider}")
+        # Build prioritized list of providers to try
+        primary = self.primary
+        providers_to_try = [primary]
+        
+        # Priority order for fallbacks
+        fallbacks = [VisionProvider.GEMINI, VisionProvider.OPENROUTER, VisionProvider.OPENAI, VisionProvider.CLAUDE, VisionProvider.OLLAMA]
+        for f in fallbacks:
+            if f != primary:
+                providers_to_try.append(f)
+
+        raw = None
+        last_error = None
+        provider_used = None
+
+        for prov in providers_to_try:
             try:
-                raw = self._call_provider(self.fallback_provider, image, user_msg)
-                provider_used = self.fallback_provider.value
-            except Exception as fallback_e:
-                f_err = fallback_e.last_attempt.exception() if hasattr(fallback_e, "last_attempt") and fallback_e.last_attempt else fallback_e
-                raise RuntimeError(f"BOTH providers failed! Primary ({self.primary}) Error: {p_err} | Fallback ({self.fallback_provider}) Error: {f_err}")
+                logger.info(f"VisionLLMEngine: Trying provider {prov}...")
+                raw = self._call_provider(prov, image, user_msg)
+                provider_used = prov.value
+                logger.info(f"VisionLLMEngine: Successfully executed using {prov}")
+                break
+            except Exception as e:
+                p_err = e.last_attempt.exception() if hasattr(e, "last_attempt") and e.last_attempt else e
+                logger.warning(f"VisionLLMEngine: Provider {prov} failed: {p_err}")
+                last_error = p_err
+
+        if raw is None:
+            raise RuntimeError(f"All vision providers failed! Last error: {last_error}")
 
         return self._parse_response(raw, provider_used, page_number, tile_index)
 
@@ -212,7 +229,7 @@ class VisionLLMEngine:
         )
         return response.content[0].text
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini(self, image: Image.Image, user_message: str) -> str:
         import requests
         from engines.api_keys import get_random_gemini_key
@@ -224,11 +241,26 @@ class VisionLLMEngine:
         img_copy.save(buf, format="JPEG", quality=80)
         b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        payload = {"contents": [{"parts": [{"text": user_message}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}]}], "generationConfig": {"temperature": 0.0, "responseMimeType": "application/json"}, "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]}}
+        payload = {
+            "contents": [{"parts": [{"text": user_message}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}]}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json",
+                "maxOutputTokens": 8192,
+                "thinkingConfig": {
+                    "thinkingBudget": 0
+                }
+            },
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            }
+        }
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=300)
         if not resp.ok:
             error_msg = f"Gemini API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (400, 403) or "blocked" in resp.text.lower() or 'quota_limit_value: "0"' in resp.text or 'quota_limit_value: \\"0\\"' in resp.text:
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         try:
@@ -236,7 +268,7 @@ class VisionLLMEngine:
         except Exception as e:
             raise ValueError(f"Unexpected Gemini response format: {data}") from e
 
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openai(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -290,6 +322,8 @@ class VisionLLMEngine:
         if not resp.ok:
             error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 403) or (resp.status_code == 429 and ("quota" in resp.text.lower() or "billing" in resp.text.lower() or "exceeded" in resp.text.lower())):
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
 
         data = resp.json()
@@ -298,7 +332,7 @@ class VisionLLMEngine:
 
         return data["choices"][0]["message"]["content"]
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openrouter(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
@@ -319,6 +353,8 @@ class VisionLLMEngine:
         if not resp.ok:
             error_msg = f"OpenRouter API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 402, 403) or "quota" in resp.text.lower() or "credits" in resp.text.lower() or "limit exceeded" in resp.text.lower():
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         if "choices" not in data or not data["choices"]:
