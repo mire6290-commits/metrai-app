@@ -19,11 +19,19 @@ import asyncio
 TASKS_STORE: Dict[str, dict] = {}
 
 from dotenv import load_dotenv
+import os
+from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-load_dotenv()
+# Explicitly load .env from the backend folder
+backend_env = Path(__file__).parent / ".env"
+if backend_env.exists():
+    load_dotenv(dotenv_path=backend_env)
+else:
+    load_dotenv()
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
