@@ -1,0 +1,224 @@
+{
+  "profiles": [
+    {
+      "id": "P001",
+      "role": "POTEAU",
+      "designation": "IPE160",
+      "quantity": 12,
+      "length_m": 0.74,
+      "masse_lineaire_kg_m": 15.8,
+      "poids_unitaire": 11.692,
+      "poids_total_kg": 140.304,
+      "confidence": 0.99
+    },
+    {
+      "id": "P002",
+      "role": "Limon",
+      "designation": "UPN160",
+      "quantity": 12,
+      "length_m": 1.312,
+      "masse_lineaire_kg_m": 18.9,
+      "poids_unitaire": 24.796799999999998,
+      "poids_total_kg": 297.5616,
+      "confidence": 0.99
+    },
+    {
+      "id": "P003",
+      "role": "Palier",
+      "designation": "UPN160",
+      "quantity": 24,
+      "length_m": 0.8,
+      "masse_lineaire_kg_m": 18.9,
+      "poids_unitaire": 15.119999999999997,
+      "poids_total_kg": 362.87999999999994,
+      "confidence": 0.99
+    },
+    {
+      "id": "P004",
+      "role": "Montant",
+      "designation": "L50*5",
+      "quantity": 12,
+      "length_m": 1.16,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 4.3732,
+      "poids_total_kg": 52.47839999999999,
+      "confidence": 0.99
+    },
+    {
+      "id": "P005",
+      "role": "Montant",
+      "designation": "L50*5",
+      "quantity": 12,
+      "length_m": 1.35,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 5.0895,
+      "poids_total_kg": 61.074,
+      "confidence": 0.99
+    },
+    {
+      "id": "P006",
+      "role": "Montant",
+      "designation": "L50*5",
+      "quantity": 12,
+      "length_m": 1.4,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 5.278,
+      "poids_total_kg": 63.336,
+      "confidence": 0.99
+    },
+    {
+      "id": "P007",
+      "role": "Fixation Montant",
+      "designation": "L50*5",
+      "quantity": 36,
+      "length_m": 0.26,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 0.9802000000000001,
+      "poids_total_kg": 35.287200000000006,
+      "confidence": 0.99
+    },
+    {
+      "id": "P008",
+      "role": "LISSE SUPÉRIEURE",
+      "designation": "L50*5",
+      "quantity": 18,
+      "length_m": 1.05,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 3.9585,
+      "poids_total_kg": 71.253,
+      "confidence": 0.99
+    },
+    {
+      "id": "P009",
+      "role": "LISSE SUPÉRIEURE",
+      "designation": "L50*5",
+      "quantity": 12,
+      "length_m": 0.9,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 3.393,
+      "poids_total_kg": 40.715999999999994,
+      "confidence": 0.99
+    },
+    {
+      "id": "P010",
+      "role": "LISSE SUPÉRIEURE",
+      "designation": "L50*5",
+      "quantity": 12,
+      "length_m": 0.625,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 2.35625,
+      "poids_total_kg": 28.275000000000002,
+      "confidence": 0.99
+    },
+    {
+      "id": "P011",
+      "role": "LISSE SUPÉRIEURE",
+      "designation": "L50*5",
+      "quantity": 6,
+      "length_m": 0.45,
+      "masse_lineaire_kg_m": 3.77,
+      "poids_unitaire": 1.6965,
+      "poids_total_kg": 10.178999999999998,
+      "confidence": 0.99
+    },
+    {
+      "id": "P012",
+      "role": "FER PLAT",
+      "designation": "PL150*6",
+      "quantity": 12,
+      "length_m": 1.34,
+      "masse_lineaire_kg_m": 7.06,
+      "poids_unitaire": 9.4604,
+      "poids_total_kg": 113.5248,
+      "confidence": 0.99
+    },
+    {
+      "id": "P013",
+      "role": "FER PLAT",
+      "designation": "PL150*6",
+      "quantity": 18,
+      "length_m": 0.84,
+      "masse_lineaire_kg_m": 7.06,
+      "poids_unitaire": 5.9304,
+      "poids_total_kg": 106.74719999999999,
+      "confidence": 0.99
+    },
+    {
+      "id": "P014",
+      "role": "Platine Limon",
+      "designation": "TN220*70*12",
+      "quantity": 6,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": 1.4784000000000002,
+      "poids_total_kg": 8.8704,
+      "confidence": 0.99
+    },
+    {
+      "id": "P015",
+      "role": "Platine Limon",
+      "designation": "TN145*70*12",
+      "quantity": 6,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": 0.9744000000000002,
+      "poids_total_kg": 5.846400000000001,
+      "confidence": 0.99
+    },
+    {
+      "id": "P016",
+      "role": "PLATIN PIED DE POTEAU",
+      "designation": "TN170*130*12",
+      "quantity": 12,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": 2.1216,
+      "poids_total_kg": 25.4592,
+      "confidence": 0.99
+    },
+    {
+      "id": "P017",
+      "role": "PLATIN DE POTEAU",
+      "designation": "TN160*82*12",
+      "quantity": 12,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": 1.2595200000000002,
+      "poids_total_kg": 15.114240000000002,
+      "confidence": 0.99
+    },
+    {
+      "id": "P018",
+      "role": "PLATIN PIED DE LEMON",
+      "designation": "TN285*75*12",
+      "quantity": 6,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": 2.0519999999999996,
+      "poids_total_kg": 12.311999999999998,
+      "confidence": 0.99
+    },
+    {
+      "id": "P019",
+      "role": "NB DE MARCHE",
+      "designation": "240*800",
+      "quantity": 24,
+      "length_m": null,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": null,
+      "poids_total_kg": null,
+      "confidence": 0.99
+    },
+    {
+      "id": "P020",
+      "role": "NB DE CAILLEBOTIS",
+      "designation": "800*800",
+      "quantity": 6,
+      "length_m": 3.8400000000000007,
+      "masse_lineaire_kg_m": null,
+      "poids_unitaire": null,
+      "poids_total_kg": null,
+      "confidence": 0.99
+    }
+  ]
+}

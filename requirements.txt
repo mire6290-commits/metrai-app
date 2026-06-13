@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+openpyxl
+reportlab
+pandas
+PyMuPDF
+openai
+anthropic
+google-genai
+google-generativeai
+requests
+Pillow
+streamlit
+python-multipart
