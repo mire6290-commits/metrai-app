@@ -87,7 +87,11 @@ class TextLLMEngine:
                 last_error = e
 
         if raw_json is None:
-            raise RuntimeError(f"All text LLM providers failed! Last error: {last_error}")
+            raise RuntimeError(
+                f"All text LLM providers failed! Please verify that your API keys are set. "
+                f"On Streamlit Cloud, you must add GEMINI_API_KEY to your App's Secrets. "
+                f"Last error: {last_error}"
+            )
             
         # Parse JSON
         if not raw_json or not isinstance(raw_json, str):

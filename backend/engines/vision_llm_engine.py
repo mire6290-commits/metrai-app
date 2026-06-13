@@ -164,7 +164,11 @@ class VisionLLMEngine:
                 last_error = p_err
 
         if raw is None:
-            raise RuntimeError(f"All vision providers failed! Last error: {last_error}")
+            raise RuntimeError(
+                f"All vision providers failed! Please verify that your API keys are set. "
+                f"On Streamlit Cloud, you must add GEMINI_API_KEY to your App's Secrets. "
+                f"Last error: {last_error}"
+            )
 
         return self._parse_response(raw, provider_used, page_number, tile_index)
 
