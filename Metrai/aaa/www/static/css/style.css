@@ -1,0 +1,222 @@
+:root {
+    --bg-color: #040407;
+    --text-color: #e1e6f0;
+    --accent-orange: #ed7d31;
+    --accent-orange-hover: #ff5e36;
+    --card-bg: rgba(18, 18, 28, 0.65);
+    --border-color: rgba(255, 255, 255, 0.06);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Outfit', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+#app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+/* Titre Corporate */
+.header-logo {
+    font-family: 'Syncopate', sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    text-align: center;
+    background: linear-gradient(135deg, #ed7d31 0%, #ff5e36 50%, #ff8c52 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 6px;
+    margin-bottom: 5px;
+    filter: drop-shadow(0 2px 8px rgba(237, 125, 49, 0.25));
+}
+
+.header-sub {
+    text-align: center;
+    font-size: 13px;
+    color: #8892b0;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+}
+
+/* Stepper UI */
+.stepper-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 35px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 15px 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.step-box {
+    text-align: center;
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555c70;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.step-box.active {
+    color: #ff5e36;
+    text-shadow: 0 0 10px rgba(255, 94, 54, 0.3);
+}
+
+/* Cartes */
+.card-glass {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(10px);
+    margin-bottom: 25px;
+}
+
+/* Drag & Drop */
+.drop-zone {
+    border: 2px dashed rgba(237, 125, 49, 0.4);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.3s ease;
+}
+
+.drop-zone:hover {
+    border-color: #ff5e36;
+    background: rgba(237, 125, 49, 0.05);
+}
+
+/* Boutons */
+button {
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+}
+
+.primary-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ed7d31 0%, #ff5e36 100%);
+    color: white;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 0.9rem;
+    border: none;
+    letter-spacing: 1px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(237, 125, 49, 0.3);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(237, 125, 49, 0.55);
+}
+
+.secondary-btn {
+    background: transparent;
+    color: white;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 0.9rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Scanner Animation */
+.laser-container {
+    position: relative; width: 140px; height: 140px; margin: 20px auto;
+    border: 2px dashed rgba(237, 125, 49, 0.4); border-radius: 16px; overflow: hidden;
+}
+.laser-beam {
+    position: absolute; width: 100%; height: 3px; background: #ff5e36;
+    top: 0; box-shadow: 0 0 12px #ff5e36;
+    animation: laserScan 2s linear infinite;
+}
+@keyframes laserScan {
+    0% { top: 0; }
+    50% { top: 100%; }
+    100% { top: 0; }
+}
+.gear-icon {
+    font-size: 38px; animation: rotatingGear 3s linear infinite; display: inline-block; margin-bottom: 10px;
+}
+@keyframes rotatingGear {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* KPI Dashboard Cards */
+.kpi-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.kpi-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 18px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+.kpi-card:hover {
+    background: rgba(237, 125, 49, 0.03);
+    border-color: rgba(237, 125, 49, 0.25);
+    transform: scale(1.02);
+}
+.kpi-val {
+    font-size: 30px;
+    font-weight: 800;
+    color: #ff5e36;
+    margin-top: 5px;
+    text-shadow: 0 0 10px rgba(255, 94, 54, 0.25);
+}
+.kpi-label {
+    font-size: 11px;
+    color: #8892b0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Table */
+.table-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+}
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+th {
+    background: rgba(237, 125, 49, 0.1);
+    color: #ed7d31;
+    font-weight: 600;
+}
+tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}

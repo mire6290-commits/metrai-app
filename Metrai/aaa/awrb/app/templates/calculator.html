@@ -1,0 +1,647 @@
+{% extends "base.html" %}
+
+{% block title %}Mathematical Solver - Metrai Calculus{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <div>
+        <h1 class="page-title">Advanced Mathematical Suite</h1>
+        <p class="page-subtitle">Select a solver module below to calculate, simplify, evaluate, or plot math models.</p>
+    </div>
+</div>
+
+<!-- Tabs Navigation Header -->
+<div class="tabs-header">
+    <button class="tab-btn active" onclick="switchTab('scientific')"><i class="fa-solid fa-calculator"></i> Scientific</button>
+    <button class="tab-btn" onclick="switchTab('algebra')"><i class="fa-solid fa-square-root-variable"></i> Algebra</button>
+    <button class="tab-btn" onclick="switchTab('calculus')"><i class="fa-solid fa-infinity"></i> Calculus</button>
+    <button class="tab-btn" onclick="switchTab('matrices')"><i class="fa-solid fa-table-cells"></i> Matrices</button>
+    <button class="tab-btn" onclick="switchTab('graphing')"><i class="fa-solid fa-chart-line"></i> Graphing</button>
+    <button class="tab-btn" onclick="switchTab('stats-conv')"><i class="fa-solid fa-chart-simple"></i> Stats & Units</button>
+</div>
+
+<div class="math-workspace">
+    <!-- INPUT COLUMN PANEL -->
+    <div class="glass-panel card workspace-input-panel">
+        
+        <!-- TAB 1: SCIENTIFIC -->
+        <div id="tab-scientific" class="tab-content active">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Scientific Calculator</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Evaluates algebraic terms, decimals, logarithms, exponential powers, trig functions, and standard fractions.</p>
+            
+            <form onsubmit="solveScientific(event)">
+                <div class="form-group">
+                    <label class="form-label">Mathematical Expression</label>
+                    <input type="text" id="scientific-expr" class="form-input" placeholder="e.g., 2 * sin(pi/4) + sqrt(16) / 2" required>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">Quick templates:</span>
+                    <button type="button" onclick="loadExample('scientific-expr', 'sqrt(3^2 + 4^2)')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">sqrt(3^2+4^2)</button>
+                    <button type="button" onclick="loadExample('scientific-expr', 'cos(pi/3) + log(e^2)')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">cos(pi/3) + log(e^2)</button>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-calculator"></i> Evaluate Expression</button>
+            </form>
+        </div>
+
+        <!-- TAB 2: ALGEBRA -->
+        <div id="tab-algebra" class="tab-content">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Algebra Solver</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Solve linear/nonlinear equations, simplify rational formulas, factor polynomials, or expand equations.</p>
+            
+            <form onsubmit="solveAlgebra(event)">
+                <div class="form-group">
+                    <label class="form-label">Algebraic Expression or Equation</label>
+                    <input type="text" id="algebra-expr" class="form-input" placeholder="e.g., x^2 + 5*x + 6 = 0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Operation</label>
+                    <select id="algebra-op" class="form-input form-select" onchange="toggleAlgebraVar()">
+                        <option value="solve">Solve for Variable</option>
+                        <option value="simplify">Simplify Expression</option>
+                        <option value="factor">Factor Polynomial</option>
+                        <option value="expand">Expand Polynomial</option>
+                    </select>
+                </div>
+                <div class="form-group" id="algebra-var-container">
+                    <label class="form-label">Solve Variable</label>
+                    <input type="text" id="algebra-var" class="form-input" value="x" placeholder="x" style="max-width: 80px; text-align: center;">
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">Quick templates:</span>
+                    <button type="button" onclick="loadExample('algebra-expr', 'x^2 - 4 = 0', 'solve')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">x^2 - 4 = 0</button>
+                    <button type="button" onclick="loadExample('algebra-expr', '(x^2 - y^2)/(x - y)', 'simplify')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">(x^2-y^2)/(x-y)</button>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-square-root-variable"></i> Compute Algebra</button>
+            </form>
+        </div>
+
+        <!-- TAB 3: CALCULUS -->
+        <div id="tab-calculus" class="tab-content">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Calculus Workspace</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Compute derivatives, indefinite integrals, definite integrals within boundaries, or limits.</p>
+            
+            <form onsubmit="solveCalculus(event)">
+                <div class="form-group">
+                    <label class="form-label">Integrand or Function f(x)</label>
+                    <input type="text" id="calculus-expr" class="form-input" placeholder="e.g., x * sin(x)" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Operation</label>
+                    <select id="calculus-op" class="form-input form-select" onchange="adjustCalculusFields()">
+                        <option value="derivative">Differentiate (Derivative)</option>
+                        <option value="integral">Integrate (Indefinite Integral)</option>
+                        <option value="definite_integral">Integrate (Definite Integral)</option>
+                        <option value="limit">Calculate Limit</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Variable</label>
+                        <input type="text" id="calculus-var" class="form-input" value="x" placeholder="x" style="text-align: center;">
+                    </div>
+                    
+                    <!-- Definite bounds -->
+                    <div class="form-group bounds-group" style="flex:1; display:none;">
+                        <label class="form-label">Lower bound (a)</label>
+                        <input type="text" id="calculus-lb" class="form-input" placeholder="0" style="text-align: center;">
+                    </div>
+                    <div class="form-group bounds-group" style="flex:1; display:none;">
+                        <label class="form-label">Upper bound (b)</label>
+                        <input type="text" id="calculus-ub" class="form-input" placeholder="pi" style="text-align: center;">
+                    </div>
+                    
+                    <!-- Limit terms -->
+                    <div class="form-group limit-group" style="flex:1; display:none;">
+                        <label class="form-label">Approaching point (a)</label>
+                        <input type="text" id="calculus-lim-pt" class="form-input" value="0" style="text-align: center;">
+                    </div>
+                    <div class="form-group limit-group" style="flex:1; display:none;">
+                        <label class="form-label">Direction</label>
+                        <select id="calculus-lim-dir" class="form-input">
+                            <option value="+-">Two-sided</option>
+                            <option value="+">Right-handed (+)</option>
+                            <option value="-">Left-handed (-)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-infinity"></i> Compute Calculus</button>
+            </form>
+        </div>
+
+        <!-- TAB 4: MATRICES -->
+        <div id="tab-matrices" class="tab-content">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Matrix Suite</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Calculate determinant, inverse, transpose, eigenvalues, matrix addition, or matrix multiplication.</p>
+            
+            <form onsubmit="solveMatrices(event)">
+                <div class="form-group">
+                    <label class="form-label">Matrix A (Row values separated by spaces, rows separated by semicolons or newlines)</label>
+                    <textarea id="matrix-a" class="form-input" rows="3" placeholder="e.g. 1 2; 3 4" required style="font-family: monospace;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Operation</label>
+                    <select id="matrix-op" class="form-input form-select" onchange="adjustMatrixFields()">
+                        <option value="determinant">Determinant</option>
+                        <option value="inverse">Inverse Matrix</option>
+                        <option value="transpose">Transpose Matrix</option>
+                        <option value="eigenvalues">Eigenvalues</option>
+                        <option value="add">Add Matrix B</option>
+                        <option value="subtract">Subtract Matrix B</option>
+                        <option value="multiply">Multiply Matrix B</option>
+                        <option value="scalar_multiply">Scalar Multiply</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="matrix-b-container" style="display:none;">
+                    <label class="form-label">Matrix B (Same format as A)</label>
+                    <textarea id="matrix-b" class="form-input" rows="3" placeholder="e.g. 5 6; 7 8" style="font-family: monospace;"></textarea>
+                </div>
+                
+                <div class="form-group" id="matrix-scalar-container" style="display:none;">
+                    <label class="form-label">Scalar Factor</label>
+                    <input type="number" id="matrix-scalar" class="form-input" step="any" placeholder="3.5" style="max-width: 100px;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-table-cells"></i> Process Matrix</button>
+            </form>
+        </div>
+
+        <!-- TAB 5: GRAPHING -->
+        <div id="tab-graphing" class="tab-content">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Interactive Graphing</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Plot 2D functions y = f(x) or 3D surfaces z = f(x, y) with boundary boundaries.</p>
+            
+            <form onsubmit="solveGraphing(event)">
+                <div class="form-group">
+                    <label class="form-label">Graph Dimension</label>
+                    <select id="graph-dim" class="form-input form-select" onchange="adjustGraphingFields()">
+                        <option value="2d">2D Cartesian Function y = f(x)</option>
+                        <option value="3d">3D Spatial Surface z = f(x, y)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="graph-expr-label">Function Equation y = f(x)</label>
+                    <input type="text" id="graph-expr" class="form-input" placeholder="e.g., x * sin(x) - 2" required>
+                </div>
+                
+                <!-- Range Controls -->
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <div class="form-group" style="flex:1; min-width:80px;">
+                        <label class="form-label">X Min</label>
+                        <input type="number" id="graph-xmin" class="form-input" value="-10" step="any">
+                    </div>
+                    <div class="form-group" style="flex:1; min-width:80px;">
+                        <label class="form-label">X Max</label>
+                        <input type="number" id="graph-xmax" class="form-input" value="10" step="any">
+                    </div>
+                    <div class="form-group graph-3d-only" style="flex:1; min-width:80px; display:none;">
+                        <label class="form-label">Y Min</label>
+                        <input type="number" id="graph-ymin" class="form-input" value="-5" step="any">
+                    </div>
+                    <div class="form-group graph-3d-only" style="flex:1; min-width:80px; display:none;">
+                        <label class="form-label">Y Max</label>
+                        <input type="number" id="graph-ymax" class="form-input" value="5" step="any">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-chart-line"></i> Generate Graph</button>
+            </form>
+        </div>
+
+        <!-- TAB 6: STATS & UNITS -->
+        <div id="tab-stats-conv" class="tab-content">
+            <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Stats & Conversions</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Calculate dataset statistics (mean, median, variance, stddev) or run unit conversions.</p>
+            
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+                <button type="button" class="tab-btn" id="sub-tab-stats-btn" onclick="switchSubTab('stats')" style="font-size:0.85rem; padding: 0.4rem 0.8rem; border-bottom-width:1px;">Statistics</button>
+                <button type="button" class="tab-btn" id="sub-tab-units-btn" onclick="switchSubTab('units')" style="font-size:0.85rem; padding: 0.4rem 0.8rem; border-bottom-width:1px;">Unit Converter</button>
+            </div>
+            
+            <!-- Statistics Panel -->
+            <div id="sub-tab-stats" class="sub-content">
+                <form onsubmit="solveStats(event)">
+                    <div class="form-group">
+                        <label class="form-label">Data Set (Comma-separated numbers)</label>
+                        <textarea id="stats-data" class="form-input" rows="4" placeholder="e.g. 1.2, 5.4, 3.8, 9.1, 7.6, 5.4, 2.3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-chart-simple"></i> Run Stats</button>
+                </form>
+            </div>
+            
+            <!-- Units Panel -->
+            <div id="sub-tab-units" class="sub-content" style="display:none;">
+                <form onsubmit="solveUnits(event)">
+                    <div class="form-group">
+                        <label class="form-label">Convert Category</label>
+                        <select id="units-cat" class="form-input form-select" onchange="adjustUnitSelections()">
+                            <option value="length">Length</option>
+                            <option value="mass">Mass / Weight</option>
+                            <option value="area">Area</option>
+                            <option value="volume">Volume</option>
+                            <option value="speed">Speed</option>
+                            <option value="temperature">Temperature</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Input Value</label>
+                        <input type="number" id="units-val" class="form-input" value="1.0" step="any" required>
+                    </div>
+                    <div style="display:flex; gap: 1rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label class="form-label">From Unit</label>
+                            <select id="units-from" class="form-input"></select>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label class="form-label">To Unit</label>
+                            <select id="units-to" class="form-input"></select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-shuffle"></i> Convert Unit</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- WORKSPACE OUTPUT RESULTS COLUMN -->
+    <div class="glass-panel workspace-output-panel" id="output-panel">
+        <div id="output-placeholder" style="text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-wand-magic-sparkles" style="font-size: 4rem; color: var(--primary); opacity: 0.6; margin-bottom: 1.5rem; animation: pulse 2s infinite;"></i>
+            <h3 style="font-size: 1.5rem; font-family: 'Outfit'; color: var(--text-primary);">Awaiting Input Expression</h3>
+            <p style="font-size: 0.9rem; max-width: 320px; margin: 0.5rem auto 0 auto; line-height: 1.4;">Enter numbers or formulas into the left fields and hit compute to see detailed step derivations.</p>
+        </div>
+        
+        <div id="output-loading" style="display: none; text-align: center;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent); margin-bottom: 1.25rem;"></i>
+            <h4 style="font-size: 1.25rem;">Processing Equation...</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Solving symbolically using local python engine routines.</p>
+        </div>
+
+        <div id="output-results" style="display: none; width: 100%; align-self: flex-start;">
+            <h3 style="font-size: 1.5rem; font-family: 'Outfit'; margin-bottom: 1rem; color: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-circle-check"></i> Solution Computed
+            </h3>
+            
+            <div id="plotly-graph-container" style="display:none; margin-bottom:1.5rem;">
+                <div id="plotly-div" class="graph-container"></div>
+                <div style="text-align:right; margin-top:0.5rem;">
+                    <a href="#" id="static-graph-download" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem;" download="metrai_calculus_plot.png"><i class="fa-solid fa-download"></i> Save Print Fallback</a>
+                </div>
+            </div>
+
+            <div class="solution-steps" id="solution-steps-list">
+                <!-- Generated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tab switching controls
+    function switchTab(tabId) {
+        document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        
+        event.currentTarget.classList.add("active");
+        document.getElementById(`tab-${tabId}`).classList.add("active");
+    }
+
+    function switchSubTab(subTabId) {
+        document.getElementById("sub-tab-stats").style.display = "none";
+        document.getElementById("sub-tab-units").style.display = "none";
+        document.getElementById("sub-tab-stats-btn").classList.remove("active");
+        document.getElementById("sub-tab-units-btn").classList.remove("active");
+        
+        document.getElementById(`sub-tab-${subTabId}`).style.display = "block";
+        document.getElementById(`sub-tab-${subTabId}-btn`).classList.add("active");
+    }
+
+    function loadExample(inputId, value, operation = null) {
+        document.getElementById(inputId).value = value;
+        if (operation) {
+            document.getElementById("algebra-op").value = operation;
+            toggleAlgebraVar();
+        }
+        showToast("Example formula preloaded.", "success");
+    }
+
+    // Toggle fields dynamically based on selection
+    function toggleAlgebraVar() {
+        const op = document.getElementById("algebra-op").value;
+        const varDiv = document.getElementById("algebra-var-container");
+        varDiv.style.display = (op === "solve") ? "block" : "none";
+    }
+
+    function adjustCalculusFields() {
+        const op = document.getElementById("calculus-op").value;
+        
+        document.querySelectorAll(".bounds-group").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".limit-group").forEach(el => el.style.display = "none");
+        
+        if (op === "definite_integral") {
+            document.querySelectorAll(".bounds-group").forEach(el => el.style.display = "block");
+        } else if (op === "limit") {
+            document.querySelectorAll(".limit-group").forEach(el => el.style.display = "block");
+        }
+    }
+
+    function adjustMatrixFields() {
+        const op = document.getElementById("matrix-op").value;
+        const bDiv = document.getElementById("matrix-b-container");
+        const sDiv = document.getElementById("matrix-scalar-container");
+        
+        bDiv.style.display = (op === "add" || op === "subtract" || op === "multiply") ? "block" : "none";
+        sDiv.style.display = (op === "scalar_multiply") ? "block" : "none";
+    }
+
+    function adjustGraphingFields() {
+        const dim = document.getElementById("graph-dim").value;
+        const label = document.getElementById("graph-expr-label");
+        const input = document.getElementById("graph-expr");
+        
+        document.querySelectorAll(".graph-3d-only").forEach(el => el.style.display = (dim === "3d") ? "block" : "none");
+        
+        if (dim === "2d") {
+            label.innerText = "Function Equation y = f(x)";
+            input.placeholder = "e.g., x * sin(x) - 2";
+        } else {
+            label.innerText = "Surface Equation z = f(x, y)";
+            input.placeholder = "e.g., sin(sqrt(x^2 + y^2))";
+        }
+    }
+
+    // Dynamic conversions dropdown options populator
+    const unitUnits = {
+        length: { m: "Meters (m)", km: "Kilometers (km)", cm: "Centimeters (cm)", mm: "Millimeters (mm)", in: "Inches (in)", ft: "Feet (ft)", yd: "Yards (yd)", mi: "Miles (mi)" },
+        mass: { kg: "Kilograms (kg)", g: "Grams (g)", mg: "Milligrams (mg)", lb: "Pounds (lb)", oz: "Ounces (oz)" },
+        area: { m2: "Square Meters (m²)", km2: "Square Kilometers (km²)", cm2: "Square Centimeters (cm²)", mm2: "Square Millimeters (mm²)", hec: "Hectares (hec)", acre: "Acres (acre)", ft2: "Square Feet (ft²)", in2: "Square Inches (in²)" },
+        volume: { l: "Liters (l)", ml: "Milliliters (ml)", m3: "Cubic Meters (m³)", gal: "Gallons (gal)", qt: "Quarts (qt)", cup: "Cups" },
+        speed: { m_s: "Meters/Second (m/s)", km_h: "Kilometers/Hour (km/h)", mph: "Miles/Hour (mph)", knot: "Knots" },
+        temperature: { c: "Celsius (°C)", f: "Fahrenheit (°F)", k: "Kelvin (K)" }
+    };
+
+    function adjustUnitSelections() {
+        const cat = document.getElementById("units-cat").value;
+        const fromSel = document.getElementById("units-from");
+        const toSel = document.getElementById("units-to");
+        
+        fromSel.innerHTML = "";
+        toSel.innerHTML = "";
+        
+        const units = unitUnits[cat];
+        for (const [k, v] of Object.entries(units)) {
+            fromSel.options.add(new Option(v, k));
+            toSel.options.add(new Option(v, k));
+        }
+        toSel.selectedIndex = (toSel.options.length > 1) ? 1 : 0;
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        adjustUnitSelections();
+        switchSubTab('stats');
+    });
+
+    // Unified AJAX Handlers
+    function showLoading() {
+        document.getElementById("output-placeholder").style.display = "none";
+        document.getElementById("output-loading").style.display = "block";
+        document.getElementById("output-results").style.display = "none";
+        document.getElementById("plotly-graph-container").style.display = "none";
+    }
+
+    function renderOutput(title, steps, latex = null, stats = null) {
+        document.getElementById("output-loading").style.display = "none";
+        document.getElementById("output-results").style.display = "block";
+        
+        const list = document.getElementById("solution-steps-list");
+        list.innerHTML = "";
+        
+        // Render steps
+        steps.forEach((step, idx) => {
+            const row = document.createElement("div");
+            row.className = "step-card";
+            row.innerHTML = `
+                <div class="step-number">Step ${idx + 1}</div>
+                <div class="step-text">${step}</div>
+            `;
+            list.appendChild(row);
+        });
+
+        if (stats) {
+            // Render descriptive statistics table card
+            const row = document.createElement("div");
+            row.className = "step-card";
+            let tbl = `
+                <div class="step-number">Descriptive Summaries</div>
+                <table style="width:100%; border-collapse:collapse; margin-top:0.5rem; font-size:0.9rem;">
+            `;
+            for (const [k, v] of Object.entries(stats)) {
+                tbl += `<tr style="border-bottom:1px solid var(--border-glass);"><td style="padding:0.4rem 0; color:var(--text-muted);">${k.toUpperCase()}</td><td style="text-align:right; font-weight:700;">${typeof v === 'number' ? v.toFixed(6) : v}</td></tr>`;
+            }
+            tbl += "</table>";
+            row.innerHTML = tbl;
+            list.appendChild(row);
+        }
+
+        renderMath();
+    }
+
+    async function handleApiCall(endpoint, payload, title) {
+        showLoading();
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                renderOutput(title, data.steps || ["Operation completed successfully."], data.latex, data.stats);
+            } else {
+                showToast(data.detail || "Solver failed.", "error");
+                resetWorkspacePlaceholder();
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+            resetWorkspacePlaceholder();
+        }
+    }
+
+    function resetWorkspacePlaceholder() {
+        document.getElementById("output-placeholder").style.display = "block";
+        document.getElementById("output-loading").style.display = "none";
+        document.getElementById("output-results").style.display = "none";
+    }
+
+    function solveScientific(event) {
+        event.preventDefault();
+        const expression = document.getElementById("scientific-expr").value;
+        handleApiCall("/api/math/scientific", { expression }, "Scientific Evaluation");
+    }
+
+    function solveAlgebra(event) {
+        event.preventDefault();
+        const expression = document.getElementById("algebra-expr").value;
+        const operation = document.getElementById("algebra-op").value;
+        const variable = document.getElementById("algebra-var").value;
+        
+        handleApiCall("/api/math/algebra", { 
+            expression, 
+            options: { operation, variable } 
+        }, "Algebra Solver");
+    }
+
+    function solveCalculus(event) {
+        event.preventDefault();
+        const expression = document.getElementById("calculus-expr").value;
+        const operation = document.getElementById("calculus-op").value;
+        const variable = document.getElementById("calculus-var").value;
+        const lower_bound = document.getElementById("calculus-lb").value;
+        const upper_bound = document.getElementById("calculus-ub").value;
+        const limit_point = document.getElementById("calculus-lim-pt").value;
+        const direction = document.getElementById("calculus-lim-dir").value;
+
+        handleApiCall("/api/math/calculus", {
+            expression,
+            options: { operation, variable, lower_bound, upper_bound, limit_point, direction }
+        }, "Calculus Solver");
+    }
+
+    // Custom Parser to parse Matrix inputs into float lists
+    function parseMatrix(str) {
+        try {
+            return str.trim().split(/[;\n]+/).map(row => 
+                row.trim().split(/\s+/).map(val => {
+                    const f = parseFloat(val);
+                    if (isNaN(f)) throw new Error();
+                    return f;
+                })
+            );
+        } catch (e) {
+            throw new Error("Matrix dimensions contain non-numerical values or uneven indices.");
+        }
+    }
+
+    function solveMatrices(event) {
+        event.preventDefault();
+        const mAStr = document.getElementById("matrix-a").value;
+        const op = document.getElementById("matrix-op").value;
+        
+        let matrix_a, matrix_b = null, scalar = null;
+        try {
+            matrix_a = parseMatrix(mAStr);
+        } catch (err) {
+            showToast(err.message, "error");
+            return;
+        }
+
+        if (op === "add" || op === "subtract" || op === "multiply") {
+            try {
+                matrix_b = parseMatrix(document.getElementById("matrix-b").value);
+            } catch (err) {
+                showToast("Matrix B contains formatting errors.", "error");
+                return;
+            }
+        }
+        
+        if (op === "scalar_multiply") {
+            scalar = parseFloat(document.getElementById("matrix-scalar").value);
+            if (isNaN(scalar)) {
+                showToast("Invalid scalar multiplier input.", "error");
+                return;
+            }
+        }
+
+        handleApiCall("/api/math/matrix", {
+            matrix_a, matrix_b, operation: op, scalar
+        }, "Matrix Processor");
+    }
+
+    function solveStats(event) {
+        event.preventDefault();
+        const expression = document.getElementById("stats-data").value;
+        handleApiCall("/api/math/statistics", { expression }, "Descriptive Statistics");
+    }
+
+    function solveUnits(event) {
+        event.preventDefault();
+        const value = parseFloat(document.getElementById("units-val").value);
+        const from_unit = document.getElementById("units-from").value;
+        const to_unit = document.getElementById("units-to").value;
+        const category = document.getElementById("units-cat").value;
+        
+        handleApiCall("/api/math/convert", {
+            value, from_unit, to_unit, category
+        }, "Unit Conversion");
+    }
+
+    // Graph plotting ajax handlers
+    async function solveGraphing(event) {
+        event.preventDefault();
+        const dim = document.getElementById("graph-dim").value;
+        const expression = document.getElementById("graph-expr").value;
+        const x_min = parseFloat(document.getElementById("graph-xmin").value);
+        const x_max = parseFloat(document.getElementById("graph-xmax").value);
+        const y_min = parseFloat(document.getElementById("graph-ymin").value);
+        const y_max = parseFloat(document.getElementById("graph-ymax").value);
+        
+        showLoading();
+        
+        const endpoint = (dim === "2d") ? "/api/math/plot/2d" : "/api/math/plot/3d";
+        const payload = {
+            expression,
+            options: { x_min, x_max, y_min, y_max }
+        };
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                document.getElementById("output-loading").style.display = "none";
+                document.getElementById("output-results").style.display = "block";
+                document.getElementById("plotly-graph-container").style.display = "block";
+                
+                // Plot interactive chart
+                Plotly.newPlot("plotly-div", data.plotly_data.data, data.plotly_data.layout);
+                
+                // Bind print fallback image
+                const downLink = document.getElementById("static-graph-download");
+                downLink.href = data.base64_img;
+                
+                // Print a single success step in results
+                const list = document.getElementById("solution-steps-list");
+                list.innerHTML = `
+                    <div class="step-card">
+                        <div class="step-number">Interactive Chart Ready</div>
+                        <div class="step-text">Calculated the explicit domain of the coordinate nodes completely locally. Drag and click the plot to scale and view spatial angles.</div>
+                    </div>
+                `;
+            } else {
+                showToast(data.detail || "Plotting equation failed.", "error");
+                resetWorkspacePlaceholder();
+            }
+        } catch (err) {
+            showToast("Server connection error.", "error");
+            resetWorkspacePlaceholder();
+        }
+    }
+</script>
+<style>
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.6; }
+        50% { transform: scale(1.1); opacity: 1; }
+    }
+</style>
+{% endblock %}

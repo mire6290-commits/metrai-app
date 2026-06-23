@@ -1,0 +1,708 @@
+{
+  "projet": "CHARPENTE AGADIR",
+  "bureau_etudes": "",
+  "date": "",
+  "lots": [
+    {
+      "id": "pos",
+      "nom": "Pos",
+      "categorie": "pos",
+      "elements": [
+        {
+          "repere": "Nomenclatures",
+          "section": "",
+          "longueur_m": null,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "1",
+      "nom": 1,
+      "categorie": "1",
+      "elements": [
+        {
+          "repere": "POTEAU",
+          "section": "",
+          "longueur_m": 0.026,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 3000.0,
+          "poids_total_kg": 18.8,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 18.8,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "2",
+      "nom": 2,
+      "categorie": "2",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.065,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 3000.0,
+          "poids_total_kg": 15.8,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 15.8,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "4",
+      "nom": 4,
+      "categorie": "4",
+      "elements": [
+        {
+          "repere": "POTELET PIGNON",
+          "section": "",
+          "longueur_m": 0.012,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 3600.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "6",
+      "nom": 6,
+      "categorie": "6",
+      "elements": [
+        {
+          "repere": "POTELET LONPAN",
+          "section": "",
+          "longueur_m": 0.084,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 2820.0,
+          "poids_total_kg": 10.4,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 10.4,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "8",
+      "nom": 8,
+      "categorie": "8",
+      "elements": [
+        {
+          "repere": "FERME",
+          "section": "",
+          "longueur_m": 0.156,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6240.0,
+          "poids_total_kg": 22.4,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 22.4,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "9",
+      "nom": 9,
+      "categorie": "9",
+      "elements": [
+        {
+          "repere": "POUTRE",
+          "section": "",
+          "longueur_m": 0.078,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12150.0,
+          "poids_total_kg": 14.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 14.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "11",
+      "nom": 11,
+      "categorie": "11",
+      "elements": [
+        {
+          "repere": "Support conduite",
+          "section": "",
+          "longueur_m": 0.002,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 73500.0,
+          "poids_total_kg": 14.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 14.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "12",
+      "nom": 12,
+      "categorie": "12",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.056,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 1480.0,
+          "poids_total_kg": 14.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 14.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "13",
+      "nom": 13,
+      "categorie": "13",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.072,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 14.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 14.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "15",
+      "nom": 15,
+      "categorie": "15",
+      "elements": [
+        {
+          "repere": "SABLIERE",
+          "section": "",
+          "longueur_m": 0.084,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 17.84,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 17.84,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "17",
+      "nom": 17,
+      "categorie": "17",
+      "elements": [
+        {
+          "repere": "PANNE",
+          "section": "",
+          "longueur_m": 0.36,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12000.0,
+          "poids_total_kg": 12.9,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 12.9,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "18",
+      "nom": 18,
+      "categorie": "18",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.036,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12000.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "19",
+      "nom": 19,
+      "categorie": "19",
+      "elements": [
+        {
+          "repere": "SUPPORT VENTILATEUR",
+          "section": "",
+          "longueur_m": 0.072,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "21",
+      "nom": 21,
+      "categorie": "21",
+      "elements": [
+        {
+          "repere": "CVT",
+          "section": "",
+          "longueur_m": 0.032,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 3225.0,
+          "poids_total_kg": 5.33,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.33,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "25",
+      "nom": 25,
+      "categorie": "25",
+      "elements": [
+        {
+          "repere": "POUTRE DE COMPRESSION",
+          "section": "",
+          "longueur_m": 0.084,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 8.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "27",
+      "nom": 27,
+      "categorie": "27",
+      "elements": [
+        {
+          "repere": "BECHE",
+          "section": "",
+          "longueur_m": 0.065,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 100.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "29",
+      "nom": 29,
+      "categorie": "29",
+      "elements": [
+        {
+          "repere": "TIGE D'ANCRAGE",
+          "section": "",
+          "longueur_m": 0.13,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 480.0,
+          "poids_total_kg": 1.59,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 1.59,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "30",
+      "nom": 30,
+      "categorie": "30",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.156,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 410.0,
+          "poids_total_kg": 2.48,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 2.48,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "31",
+      "nom": 31,
+      "categorie": "31",
+      "elements": [
+        {
+          "repere": "PLATS ",
+          "section": "",
+          "longueur_m": 0.286,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "32",
+      "nom": 32,
+      "categorie": "32",
+      "elements": [
+        {
+          "repere": "Preplatine",
+          "section": "",
+          "longueur_m": 0.026,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "33",
+      "nom": 33,
+      "categorie": "33",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.065,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "35",
+      "nom": 35,
+      "categorie": "35",
+      "elements": [
+        {
+          "repere": "PLATINE POTEAU IPE180",
+          "section": "",
+          "longueur_m": 0.026,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "36",
+      "nom": 36,
+      "categorie": "36",
+      "elements": [
+        {
+          "repere": "PLATINE POTEAU IPE160",
+          "section": "",
+          "longueur_m": 0.065,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "37",
+      "nom": 37,
+      "categorie": "37",
+      "elements": [
+        {
+          "repere": "RED IPE180",
+          "section": "",
+          "longueur_m": 0.104,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "38",
+      "nom": 38,
+      "categorie": "38",
+      "elements": [
+        {
+          "repere": "RED IPE160",
+          "section": "",
+          "longueur_m": 0.26,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "39",
+      "nom": 39,
+      "categorie": "39",
+      "elements": [
+        {
+          "repere": "GOUSSET POUTEAU IPE180",
+          "section": "",
+          "longueur_m": 0.052,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "40",
+      "nom": 40,
+      "categorie": "40",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.104,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "41",
+      "nom": 41,
+      "categorie": "41",
+      "elements": [
+        {
+          "repere": "Platine FAITAGE",
+          "section": "",
+          "longueur_m": 0.312,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "42",
+      "nom": 42,
+      "categorie": "42",
+      "elements": [
+        {
+          "repere": "COIFEE POUTEAU IPE180",
+          "section": "",
+          "longueur_m": 0.026,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "43",
+      "nom": 43,
+      "categorie": "43",
+      "elements": [
+        {
+          "repere": "COIFEE POUTEAU IPE160",
+          "section": "",
+          "longueur_m": 0.065,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "44",
+      "nom": 44,
+      "categorie": "44",
+      "elements": [
+        {
+          "repere": "Renfort",
+          "section": "",
+          "longueur_m": 0.164,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "45",
+      "nom": 45,
+      "categorie": "45",
+      "elements": [
+        {
+          "repere": "Platine tcarre 100*5",
+          "section": "",
+          "longueur_m": 0.156,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "46",
+      "nom": 46,
+      "categorie": "46",
+      "elements": [
+        {
+          "repere": "GOUSSET CVT",
+          "section": "",
+          "longueur_m": 0.864,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "47",
+      "nom": 47,
+      "categorie": "47",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.09,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "48",
+      "nom": 48,
+      "categorie": "48",
+      "elements": [
+        {
+          "repere": "TACHE PANNE",
+          "section": "",
+          "longueur_m": 0.78,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    }
+  ],
+  "assemblages": {
+    "platines": [],
+    "raidisseurs": []
+  },
+  "boulonnerie": [
+    {
+      "designation": "BOULONNERIE + SOUDAGE 5%",
+      "total_kg": 10.37
+    }
+  ],
+  "ancrages": [],
+  "recapitulatif": {
+    "sous_total_kg": 207.44,
+    "boulonnerie_kg": 10.37,
+    "total_acier_kg": 217.81,
+    "observations": ""
+  }
+}

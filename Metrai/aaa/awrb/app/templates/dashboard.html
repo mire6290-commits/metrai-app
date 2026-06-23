@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}My Workspace - Metrai Calculus{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Personal Workspace</h1>
+        <p class="page-subtitle">Manage calculation history, bookmarked equations, and workspace telemetry.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a href="/calculator" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Calculation</a>
+    </div>
+</div>
+
+<!-- Telemetry Summary Cards -->
+<div class="dash-stat-grid">
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div class="stat-info">
+            <h3 id="stat-total">-</h3>
+            <p>Total Equations Solved</p>
+        </div>
+    </div>
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">
+            <i class="fa-solid fa-thumbtack"></i>
+        </div>
+        <div class="stat-info">
+            <h3 id="stat-pinned">-</h3>
+            <p>Bookmarked Formulations</p>
+        </div>
+    </div>
+    <div class="glass-panel stat-card">
+        <div class="stat-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--accent);">
+            <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <div class="stat-info">
+            <h3 id="stat-activities">-</h3>
+            <p>System Audits Registered</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid-main-aside">
+    <!-- Recent Activity History Logs -->
+    <div class="glass-panel card" style="padding: 2rem 1.5rem;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; font-family: 'Outfit';"><i class="fa-solid fa-history" style="color: var(--primary);"></i> Computational History</h2>
+        
+        <div id="history-container" class="history-list">
+            {% if not history %}
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <i class="fa-solid fa-calculator" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <p>Your mathematical workspace history is empty.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">Resolve expressions in the solver to log them here.</p>
+            </div>
+            {% else %}
+            {% for item in history %}
+            <div class="history-item" id="calc-row-{{ item.id }}">
+                <div class="history-meta">
+                    <span class="history-type type-{% if 'algebra' in item.calculation_type %}alg{% elif 'calculus' in item.calculation_type %}mat{% elif 'ocr' in item.calculation_type %}ocr{% else %}calc{% endif %}">
+                        {{ item.calculation_type.replace('_', ' ') }}
+                    </span>
+                    <div class="history-expr">{{ item.expression_input }}</div>
+                    <div class="history-date">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+                </div>
+                
+                <div class="history-actions">
+                    <!-- Expand solutions viewer -->
+                    <button class="action-btn" onclick="viewCalculationDetail({{ item.id }})" title="View Solution Detailed Steps">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
+                    <!-- Toggle bookmarking -->
+                    <button class="action-btn btn-pin {% if item.is_saved %}pinned{% endif %}" id="pin-btn-{{ item.id }}" onclick="togglePin({{ item.id }})" title="Bookmark / Pin">
+                        <i class="fa-solid fa-thumbtack"></i>
+                    </button>
+                    <!-- Delete item -->
+                    <button class="action-btn" onclick="deleteHistory({{ item.id }})" title="Delete entry" style="color: var(--error);">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bookmarked Pinned Panel Side panel -->
+    <div class="glass-panel card" style="padding: 1.5rem 1.25rem; height: fit-content;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 1rem; font-family: 'Outfit';"><i class="fa-solid fa-bookmark" style="color: var(--warning);"></i> Pinned Rules</h2>
+        
+        <div id="pinned-container" class="history-list">
+            {% if not pinned %}
+            <p id="pinned-empty-msg" style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1.5rem 0;">
+                Pin formulas from your history list for quick access reference.
+            </p>
+            {% else %}
+            {% for pin in pinned %}
+            <div class="history-item" id="pinned-row-{{ pin.id }}" style="padding: 0.75rem 1rem;">
+                <div style="flex: 1; min-width: 0;">
+                    <div class="history-expr" style="font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pin.expression_input }}</div>
+                    <span style="font-size: 0.7rem; color: var(--text-muted);">{{ pin.calculation_type }}</span>
+                </div>
+                <button class="action-btn" onclick="viewCalculationDetail({{ pin.id }})" style="font-size: 1rem;"><i class="fa-solid fa-eye"></i></button>
+                <button class="action-btn" onclick="togglePin({{ pin.id }})" style="font-size: 1rem; color: var(--warning);"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Computational Steps Viewer Modal -->
+<div id="solution-modal" style="display: none; position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="glass-panel card" style="max-width: 800px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative;">
+        <button onclick="closeModal()" style="position: absolute; right: 1.5rem; top: 1.5rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: var(--transition-smooth);"><i class="fa-solid fa-xmark"></i></button>
+        
+        <h2 id="modal-title" style="font-size: 1.75rem; margin-bottom: 0.5rem; font-family: 'Outfit';">Calculation Solution</h2>
+        <p id="modal-type" style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem;"></p>
+        
+        <div style="background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border-glass); margin-bottom: 1.5rem;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Expression:</p>
+            <div id="modal-input" style="font-family: monospace; font-size: 1.15rem; margin-top: 0.35rem; color: var(--text-primary);"></div>
+        </div>
+
+        <div id="modal-steps-container" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Step rows generated here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        refreshDashboardStats();
+    });
+
+    async function refreshDashboardStats() {
+        try {
+            const response = await fetch("/api/dashboard/stats");
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById("stat-total").innerText = data.total_calculations;
+                document.getElementById("stat-pinned").innerText = data.saved_calculations;
+                document.getElementById("stat-activities").innerText = data.recent_activity_count;
+            }
+        } catch (err) {
+            console.error("Failed to load dashboard metrics.", err);
+        }
+    }
+
+    async function togglePin(id) {
+        try {
+            const response = await fetch(`/api/dashboard/save/${id}`, {
+                method: "POST"
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const btn = document.getElementById(`pin-btn-${id}`);
+                
+                if (data.is_saved) {
+                    if (btn) btn.classList.add("pinned");
+                    showToast("Calculation saved to pinned board.", "success");
+                } else {
+                    if (btn) btn.classList.remove("pinned");
+                    showToast("Calculation removed from pinned board.", "success");
+                    
+                    // If row exists in side bookmarked panel, remove it
+                    const pRow = document.getElementById(`pinned-row-${id}`);
+                    if (pRow) pRow.remove();
+                }
+                
+                refreshDashboardStats();
+                // Proactively reload page widgets to render full layouts or update list sync
+                setTimeout(() => window.location.reload(), 800);
+            }
+        } catch (err) {
+            showToast("Failed to toggle pin state.", "error");
+        }
+    }
+
+    async function deleteHistory(id) {
+        if (!confirm("Are you sure you want to delete this calculation from history?")) return;
+        
+        try {
+            const response = await fetch(`/api/dashboard/history/${id}`, {
+                method: "DELETE"
+            });
+            if (response.ok) {
+                showToast("Calculation removed from history.", "success");
+                document.getElementById(`calc-row-${id}`).remove();
+                const pRow = document.getElementById(`pinned-row-${id}`);
+                if (pRow) pRow.remove();
+                refreshDashboardStats();
+            } else {
+                showToast("Failed to delete entry.", "error");
+            }
+        } catch (err) {
+            showToast("Error connecting to server.", "error");
+        }
+    }
+
+    // Modal Details viewer
+    let preloadedCalcs = {};
+    {% for item in history %}
+    preloadedCalcs[{{ item.id }}] = {
+        title: "{{ item.calculation_type.replace('_', ' ').title() }}",
+        type: "{{ item.calculation_type }}",
+        input: "{{ item.expression_input }}",
+        output: JSON.parse('{{ item.expression_output | safe }}')
+    };
+    {% endfor %}
+
+    function viewCalculationDetail(id) {
+        const item = preloadedCalcs[id];
+        if (!item) {
+            showToast("Calculation data not loaded locally.", "error");
+            return;
+        }
+
+        document.getElementById("modal-title").innerText = item.title;
+        document.getElementById("modal-type").innerText = item.type.replace('_', ' ');
+        document.getElementById("modal-input").innerText = item.input;
+        
+        const container = document.getElementById("modal-steps-container");
+        container.innerHTML = "";
+
+        const details = item.output;
+
+        if (details.steps && details.steps.length > 0) {
+            details.steps.forEach((step, idx) => {
+                const stepCard = document.createElement("div");
+                stepCard.className = "step-card";
+                stepCard.innerHTML = `
+                    <div class="step-number">Step ${idx + 1}</div>
+                    <div class="step-text">${step}</div>
+                `;
+                container.appendChild(stepCard);
+            });
+        } else if (details.stats) {
+            // Render statistical parameters table
+            const tableCard = document.createElement("div");
+            tableCard.className = "step-card";
+            let listHtml = `<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">`;
+            for (const [k, v] of Object.entries(details.stats)) {
+                listHtml += `<tr style="border-bottom:1px solid var(--border-glass);"><td style="padding:0.5rem 0; color:var(--text-muted);">${k.toUpperCase()}</td><td style="text-align:right; font-weight:700;">${typeof v === 'number' ? v.toFixed(6) : v}</td></tr>`;
+            }
+            listHtml += "</table>";
+            tableCard.innerHTML = listHtml;
+            container.appendChild(tableCard);
+        } else if (details.result) {
+            const stepCard = document.createElement("div");
+            stepCard.className = "step-card";
+            stepCard.innerHTML = `
+                <div class="step-number">Final Symbolic Result</div>
+                <div class="step-text">$$${details.latex || details.result}$$</div>
+            `;
+            container.appendChild(stepCard);
+        } else {
+            const stepCard = document.createElement("div");
+            stepCard.className = "step-card";
+            stepCard.innerHTML = `<div class="step-text">Success. No details steps available.</div>`;
+            container.appendChild(stepCard);
+        }
+
+        document.getElementById("solution-modal").style.display = "flex";
+        renderMath();
+    }
+
+    function closeModal() {
+        document.getElementById("solution-modal").style.display = "none";
+    }
+</script>
+{% endblock %}

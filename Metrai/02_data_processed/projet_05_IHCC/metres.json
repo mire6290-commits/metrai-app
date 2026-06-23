@@ -1,0 +1,404 @@
+{
+  "projet": "IHCC",
+  "bureau_etudes": "",
+  "date": "",
+  "lots": [
+    {
+      "id": "pos",
+      "nom": "Pos",
+      "categorie": "pos",
+      "elements": [
+        {
+          "repere": "Nomenclatures",
+          "section": "",
+          "longueur_m": null,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "1",
+      "nom": 1,
+      "categorie": "1",
+      "elements": [
+        {
+          "repere": "Membrure supérieur",
+          "section": "",
+          "longueur_m": 0.004,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 11500.0,
+          "poids_total_kg": 60.3,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 60.3,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "5",
+      "nom": 5,
+      "categorie": "5",
+      "elements": [
+        {
+          "repere": "Membrane inférieur",
+          "section": "",
+          "longueur_m": 0.004,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12000.0,
+          "poids_total_kg": 60.3,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 60.3,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "8",
+      "nom": 8,
+      "categorie": "8",
+      "elements": [
+        {
+          "repere": "MONTANT",
+          "section": "",
+          "longueur_m": 0.036,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 1000.0,
+          "poids_total_kg": 16.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 16.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "10",
+      "nom": 10,
+      "categorie": "10",
+      "elements": [
+        {
+          "repere": "PANNES",
+          "section": "",
+          "longueur_m": 0.011,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12150.0,
+          "poids_total_kg": 19.9,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 19.9,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "13",
+      "nom": 13,
+      "categorie": "13",
+      "elements": [
+        {
+          "repere": "Diagonale",
+          "section": "",
+          "longueur_m": 0.04,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 2110.0,
+          "poids_total_kg": 24.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 24.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "15",
+      "nom": 15,
+      "categorie": "15",
+      "elements": [
+        {
+          "repere": "Poutre support",
+          "section": "",
+          "longueur_m": 0.002,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 20350.0,
+          "poids_total_kg": 30.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 30.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "17",
+      "nom": 17,
+      "categorie": "17",
+      "elements": [
+        {
+          "repere": "TIGE D'ANCRAGE",
+          "section": "",
+          "longueur_m": 0.016,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 500.0,
+          "poids_total_kg": 5.58,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.58,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "19",
+      "nom": 19,
+      "categorie": "19",
+      "elements": [
+        {
+          "repere": "Platine  membrure supp et inf",
+          "section": "",
+          "longueur_m": 0.004,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "20",
+      "nom": 20,
+      "categorie": "20",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.004,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "21",
+      "nom": 21,
+      "categorie": "21",
+      "elements": [
+        {
+          "repere": "Platine de poutre support",
+          "section": "",
+          "longueur_m": 0.022,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "22",
+      "nom": 22,
+      "categorie": "22",
+      "elements": [
+        {
+          "repere": "Redisure de poutre support",
+          "section": "",
+          "longueur_m": 0.088,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "24",
+      "nom": 24,
+      "categorie": "24",
+      "elements": [
+        {
+          "repere": "Platine Diagonale ET MONTANT",
+          "section": "",
+          "longueur_m": 0.08,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "25",
+      "nom": 25,
+      "categorie": "25",
+      "elements": [
+        {
+          "repere": "Platine de jarrets",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "27",
+      "nom": 27,
+      "categorie": "27",
+      "elements": [
+        {
+          "repere": "ECHANTIGNOLE",
+          "section": "",
+          "longueur_m": 0.055,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "28",
+      "nom": 28,
+      "categorie": "28",
+      "elements": [
+        {
+          "repere": "",
+          "section": "",
+          "longueur_m": 0.011,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "30",
+      "nom": 30,
+      "categorie": "30",
+      "elements": [
+        {
+          "repere": "PLAQUE D'ENCRAGE",
+          "section": "",
+          "longueur_m": 0.016,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "32",
+      "nom": 32,
+      "categorie": "32",
+      "elements": [
+        {
+          "repere": "PLATINE SOCLE",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "34",
+      "nom": 34,
+      "categorie": "34",
+      "elements": [
+        {
+          "repere": "Tôle periphirique 25/10",
+          "section": "",
+          "longueur_m": 0.028,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "36",
+      "nom": 36,
+      "categorie": "36",
+      "elements": [
+        {
+          "repere": "BOULONNERIE + SOUDAGE",
+          "section": "",
+          "longueur_m": 0.0,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    }
+  ],
+  "assemblages": {
+    "platines": [],
+    "raidisseurs": []
+  },
+  "boulonnerie": [
+    {
+      "designation": "BOULONNERIE + SOUDAGE 5%",
+      "total_kg": 10.91
+    }
+  ],
+  "ancrages": [],
+  "recapitulatif": {
+    "sous_total_kg": 218.18,
+    "boulonnerie_kg": 10.91,
+    "total_acier_kg": 229.09,
+    "observations": ""
+  }
+}

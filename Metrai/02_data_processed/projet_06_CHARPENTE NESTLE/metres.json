@@ -1,0 +1,385 @@
+{
+  "projet": "CHARPENTE NESTLE",
+  "bureau_etudes": "",
+  "date": "",
+  "lots": [
+    {
+      "id": "pos",
+      "nom": "Pos",
+      "categorie": "pos",
+      "elements": [
+        {
+          "repere": "Nomenclatures",
+          "section": "",
+          "longueur_m": null,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "1",
+      "nom": 1,
+      "categorie": "1",
+      "elements": [
+        {
+          "repere": "POTEAU",
+          "section": "",
+          "longueur_m": 0.01,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 42.3,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 42.3,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "3",
+      "nom": 3,
+      "categorie": "3",
+      "elements": [
+        {
+          "repere": "POUTRE",
+          "section": "",
+          "longueur_m": 0.01,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 18.8,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 18.8,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "4",
+      "nom": 4,
+      "categorie": "4",
+      "elements": [
+        {
+          "repere": "POUTRE-JARRET",
+          "section": "",
+          "longueur_m": 0.02,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 1500.0,
+          "poids_total_kg": 18.8,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 18.8,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "6",
+      "nom": 6,
+      "categorie": "6",
+      "elements": [
+        {
+          "repere": "SABLIERE",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 16.7,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 16.7,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "8",
+      "nom": 8,
+      "categorie": "8",
+      "elements": [
+        {
+          "repere": "PANNE",
+          "section": "",
+          "longueur_m": 0.024,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12000.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "10",
+      "nom": 10,
+      "categorie": "10",
+      "elements": [
+        {
+          "repere": "CVT",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 8000.0,
+          "poids_total_kg": 5.42,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.42,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "12",
+      "nom": 12,
+      "categorie": "12",
+      "elements": [
+        {
+          "repere": "LIERNES",
+          "section": "",
+          "longueur_m": 0.016,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 6000.0,
+          "poids_total_kg": 0.89,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.888,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "14",
+      "nom": 14,
+      "categorie": "14",
+      "elements": [
+        {
+          "repere": "LISSE DE BARDAGE",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 12000.0,
+          "poids_total_kg": 8.1,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 8.1,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "16",
+      "nom": 16,
+      "categorie": "16",
+      "elements": [
+        {
+          "repere": "PORTE METALLIQUE",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 3000.0,
+          "poids_total_kg": 5.13,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.13,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "17",
+      "nom": 17,
+      "categorie": "17",
+      "elements": [
+        {
+          "repere": "PORTE METALLIQUE",
+          "section": "",
+          "longueur_m": 0.008,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 1500.0,
+          "poids_total_kg": 5.13,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.13,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "18",
+      "nom": 18,
+      "categorie": "18",
+      "elements": [
+        {
+          "repere": "PORTE METALLIQUE",
+          "section": "",
+          "longueur_m": 0.004,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "20",
+      "nom": 20,
+      "categorie": "20",
+      "elements": [
+        {
+          "repere": "TIGE D'ANCRAGE",
+          "section": "",
+          "longueur_m": 0.064,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 600.0,
+          "poids_total_kg": 5.55,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 5.55,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "21",
+      "nom": 21,
+      "categorie": "21",
+      "elements": [
+        {
+          "repere": "CLE D'ANCRAGE",
+          "section": "",
+          "longueur_m": 0.016,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": 600.0,
+          "poids_total_kg": 7.55,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 7.55,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "23",
+      "nom": 23,
+      "categorie": "23",
+      "elements": [
+        {
+          "repere": "PLATINE PIED DE POTEAU",
+          "section": "",
+          "longueur_m": 0.003,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "25",
+      "nom": 25,
+      "categorie": "25",
+      "elements": [
+        {
+          "repere": "PLATINE PR",
+          "section": "",
+          "longueur_m": 0.002,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "27",
+      "nom": 27,
+      "categorie": "27",
+      "elements": [
+        {
+          "repere": "RAID PT/PT ET GOUSSET",
+          "section": "",
+          "longueur_m": 0.002,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "29",
+      "nom": 29,
+      "categorie": "29",
+      "elements": [
+        {
+          "repere": "ECHANTIGNOLE",
+          "section": "",
+          "longueur_m": 0.001,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    },
+    {
+      "id": "31",
+      "nom": 31,
+      "categorie": "31",
+      "elements": [
+        {
+          "repere": "BOULONNERIE + SOUDAGE",
+          "section": "",
+          "longueur_m": 0.0,
+          "quantite": 0,
+          "total_ml": null,
+          "poids_kg_m": null,
+          "poids_total_kg": null,
+          "remarque": ""
+        }
+      ],
+      "sous_total_kg": 0.0,
+      "sous_total_ml": 0.0
+    }
+  ],
+  "assemblages": {
+    "platines": [],
+    "raidisseurs": []
+  },
+  "boulonnerie": [
+    {
+      "designation": "BOULONNERIE + SOUDAGE 5%",
+      "total_kg": 7.12
+    }
+  ],
+  "ancrages": [],
+  "recapitulatif": {
+    "sous_total_kg": 142.47,
+    "boulonnerie_kg": 7.12,
+    "total_acier_kg": 149.59,
+    "observations": ""
+  }
+}
