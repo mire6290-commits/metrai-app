@@ -31,6 +31,17 @@ def is_port_in_use(port: int) -> bool:
         return s.connect_ex(('127.0.0.1', port)) == 0
 
 def run_uvicorn():
+    import importlib
+    import sys
+    
+    # Force reload all backend modules to bypass python module caching
+    to_reload = [k for k in sys.modules.keys() if k.startswith("backend")]
+    for m in to_reload:
+        try:
+            importlib.reload(sys.modules[m])
+        except Exception:
+            pass
+            
     import uvicorn
     from backend import main
     uvicorn.run(main.app, host="127.0.0.1", port=8000, log_level="error")
