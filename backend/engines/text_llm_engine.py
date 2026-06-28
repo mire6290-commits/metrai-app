@@ -63,6 +63,8 @@ class TextLLMEngine:
             providers_to_try.extend(["openrouter", "gemini"])
         elif primary == "openai":
             providers_to_try.extend(["gemini", "openrouter"])
+        elif primary == "claude":
+            providers_to_try.extend(["gemini", "openrouter"])
             
         raw_json = None
         used_provider = None
@@ -79,6 +81,8 @@ class TextLLMEngine:
                     raw_json = self._call_gemini_text(user_msg)
                 elif prov == "openai":
                     raw_json = self._call_openai_text(user_msg)
+                elif prov == "claude":
+                    raw_json = self._call_claude_text(user_msg)
                 used_provider = prov
                 logger.info(f"TextLLMEngine: Successfully extracted using {prov}")
                 break
@@ -356,3 +360,36 @@ class TextLLMEngine:
         raw_json = data["choices"][0]["message"]["content"]
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
+    def _call_claude_text(self, user_msg: str) -> str:
+        import anthropic
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        logger.info(f"Sending text to Anthropic Claude API (model: {model})...")
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model=model,
+                max_tokens=4000,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_msg}],
+            )
+            raw_json = response.content[0].text
+            raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            return raw_json
+        except anthropic.APIStatusError as e:
+            error_msg = f"Anthropic Claude API failed: {e.status_code} - {e.message}"
+            logger.error(error_msg)
+            if e.status_code == 400 and ("credit" in e.message.lower() or "balance" in e.message.lower()):
+                raise FatalAPIError(error_msg)
+            if e.status_code in (401, 403):
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Anthropic Claude error: {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)

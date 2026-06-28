@@ -215,23 +215,38 @@ class VisionLLMEngine:
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_claude(self, image: Image.Image, user_message: str) -> str:
         import anthropic
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise EnvironmentError("ANTHROPIC_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         client = anthropic.Anthropic(api_key=api_key)
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
-        response = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=2000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_b64}}, {"type": "text", "text": user_message}]}],
-        )
-        return response.content[0].text
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=2000,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_b64}}, {"type": "text", "text": user_message}]}],
+            )
+            return response.content[0].text
+        except anthropic.APIStatusError as e:
+            error_msg = f"Anthropic Claude API failed: {e.status_code} - {e.message}"
+            logger.error(error_msg)
+            if e.status_code == 400 and ("credit" in e.message.lower() or "balance" in e.message.lower()):
+                raise FatalAPIError(error_msg)
+            if e.status_code in (401, 403):
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Anthropic Claude error: {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini(self, image: Image.Image, user_message: str) -> str:

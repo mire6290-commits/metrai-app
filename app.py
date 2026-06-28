@@ -82,7 +82,7 @@ with st.sidebar:
     scale_hint = st.text_input("Scale Hint (Optional)", value="1:50")
     pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
     mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
-    provider = st.selectbox("AI Provider", ["gemini", "openai", "ollama", "openrouter"])
+    provider = st.selectbox("AI Provider", ["gemini", "openai", "claude", "ollama", "openrouter"])
     detailed_mode = st.checkbox("🔍 Mode Plan Détaillé / Assemblage", value=False, help="Activez ceci pour extraire tous les détails et ignorer les contraintes de hangar standard (Recommandé pour Padel, Escabeaux, et assemblages complexes).")
     
     if st.button("🔄 Reset App State", help="Click this if the extraction button gets stuck."):
