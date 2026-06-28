@@ -10,13 +10,17 @@ import socket
 # Copy Streamlit secrets to environment variables so the backend can access them
 if hasattr(st, "secrets"):
     try:
+        print("--- COPYING STREAMLIT SECRETS TO OS.ENVIRON ---")
         for key in st.secrets.keys():
             val = st.secrets[key]
             if isinstance(val, dict) or str(type(val)) == "<class 'streamlit.runtime.secrets.AttrDict'>":
                 for sub_key in val.keys():
                     os.environ[f"{key}_{sub_key}"] = str(val[sub_key])
+                    print(f"Copied secret key: {key}_{sub_key}")
             else:
                 os.environ[key] = str(val)
+                print(f"Copied secret key: {key}")
+        print("--- COPYING COMPLETE ---")
     except Exception as e:
         print(f"Error copying Streamlit secrets to environment: {e}")
 
@@ -102,6 +106,22 @@ with st.sidebar:
         st.session_state.extraction_result = None
         st.session_state.is_extracting = False
         st.rerun()
+
+    st.divider()
+    st.markdown("### 🔑 API Keys Status")
+    keys_to_check = {
+        "Gemini Key": "GEMINI_API_KEY",
+        "Claude Key": "ANTHROPIC_API_KEY",
+        "Ollama Proxy Key": "OLLAMA_API_KEY",
+        "OpenAI Key": "OPENAI_API_KEY",
+        "OpenRouter Key": "OPENROUTER_API_KEY"
+    }
+    for name, env_var in keys_to_check.items():
+        val = os.environ.get(env_var) or (hasattr(st, "secrets") and st.secrets.get(env_var))
+        if val and str(val).strip():
+            st.success(f"{name}: **Loaded** ✅")
+        else:
+            st.error(f"{name}: **Missing** ❌")
 
 uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'])
 
