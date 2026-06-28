@@ -7,6 +7,19 @@ import os
 import threading
 import socket
 
+# Copy Streamlit secrets to environment variables so the backend can access them
+if hasattr(st, "secrets"):
+    try:
+        for key in st.secrets.keys():
+            val = st.secrets[key]
+            if isinstance(val, dict) or str(type(val)) == "<class 'streamlit.runtime.secrets.AttrDict'>":
+                for sub_key in val.keys():
+                    os.environ[f"{key}_{sub_key}"] = str(val[sub_key])
+            else:
+                os.environ[key] = str(val)
+    except Exception as e:
+        print(f"Error copying Streamlit secrets to environment: {e}")
+
 sys.path.insert(0, os.path.abspath('backend'))
 
 def is_port_in_use(port: int) -> bool:
