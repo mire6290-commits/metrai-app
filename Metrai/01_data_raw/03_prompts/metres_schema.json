@@ -1,0 +1,15 @@
+{
+  "projet": "NOM_AFFAIRE",
+  "bureau_etudes": "NOM_BUREAU",
+  "date": "JJ/MM/AAAA",
+  "lots": [],
+  "assemblages": { "platines": [] },
+  "boulonnerie": [],
+  "ancrages": [],
+  "recapitulatif": {
+    "sous_total_kg": 0,
+    "boulonnerie_kg": 0,
+    "total_acier_kg": 0,
+    "observations": ""
+  }
+}

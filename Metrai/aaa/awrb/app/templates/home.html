@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Metrai Calculus - Local Math Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        text-align: center;
+        padding: 5rem 1rem;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+    .hero-title {
+        font-size: 3.75rem;
+        font-weight: 800;
+        font-family: 'Outfit', sans-serif;
+        line-height: 1.1;
+        margin-bottom: 1.5rem;
+        letter-spacing: -1.5px;
+    }
+    .hero-title span {
+        background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .hero-desc {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        max-width: 700px;
+        margin: 0 auto 2.5rem auto;
+        line-height: 1.6;
+    }
+    .feature-card {
+        padding: 2.25rem 1.75rem;
+        text-align: center;
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    .feature-icon {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+    }
+    .sandbox-panel {
+        margin: 4rem auto;
+        max-width: 800px;
+        padding: 2.5rem;
+    }
+    .sandbox-input-container {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    .sandbox-result {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--border-glass);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-top: 1.5rem;
+        min-height: 80px;
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">Unleash Next-Gen Local<br><span>Mathematical Intelligence</span></h1>
+    <p class="hero-desc">
+        Resolve algebraic systems, advanced calculus derivatives, integrations, matrix transformations, and OCR equation image recognitions completely locally. Zero paid APIs, maximum speed, complete privacy.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/calculator" class="btn btn-primary btn-lg"><i class="fa-solid fa-wand-magic-sparkles"></i> Open Workspace</a>
+        <a href="/ocr" class="btn btn-secondary btn-lg"><i class="fa-solid fa-expand"></i> Scan Equations</a>
+    </div>
+</div>
+
+<!-- Features Grid Showcase -->
+<div class="page-header" style="margin-bottom: 2rem; justify-content: center; text-align: center;">
+    <div>
+        <h2 class="page-title" style="font-size: 2rem;">Local Math Processing Features</h2>
+        <p class="page-subtitle">Fully optimized mathematical routines powered locally.</p>
+    </div>
+</div>
+
+<div class="grid-3" style="margin-bottom: 4rem;">
+    <div class="glass-panel feature-card">
+        <div class="feature-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
+            <i class="fa-solid fa-calculator"></i>
+        </div>
+        <h3>Algebra & Calculus</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Simplify formulas, calculate derivatives, definite/indefinite integrations, and limits with structured step-by-step explanations.
+        </p>
+    </div>
+    
+    <div class="glass-panel feature-card">
+        <div class="feature-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--accent);">
+            <i class="fa-solid fa-camera"></i>
+        </div>
+        <h3>Mathematical OCR</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Upload images of hand-written formulas. Our OpenCV preprocessors and Tesseract scanner convert them to editable equations instantly.
+        </p>
+    </div>
+    
+    <div class="glass-panel feature-card">
+        <div class="feature-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success);">
+            <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <h3>Interactive Plotting</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Render clean, responsive 2D explicit/parametric plots and 3D surface charts using Plotly. Fully zoomable and interactive.
+        </p>
+    </div>
+</div>
+
+<!-- Interactive Sandbox Playground -->
+<div class="glass-panel sandbox-panel">
+    <h2 style="font-size: 1.75rem; text-align: center; font-family: 'Outfit';">Try Metrai Calculus Live</h2>
+    <p style="text-align: center; color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem;">
+        Type any arithmetic or sympy formula (e.g. <code>x^2 + 5x + 6 = 0</code>, <code>diff(sin(x), x)</code>) to see it solved.
+    </p>
+    
+    <div class="sandbox-input-container">
+        <input type="text" id="sandbox-input" class="form-input" placeholder="e.g., 2*x + 5 = 15 or integrate(x*cos(x), x)" style="font-size: 1.05rem;">
+        <button onclick="runSandbox()" class="btn btn-accent" id="sandbox-btn" style="min-width: 130px;"><i class="fa-solid fa-play"></i> Solve</button>
+    </div>
+    
+    <div id="sandbox-output-block" class="sandbox-result">
+        <div id="sandbox-loading" style="display: none; text-align: center; color: var(--accent);">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+            <p style="font-size: 0.85rem;">Solving equation locally...</p>
+        </div>
+        <div id="sandbox-success" style="display: none;">
+            <p style="font-size: 0.8rem; color: var(--success); font-weight: 700; text-transform: uppercase;">Exact Symbolic Output:</p>
+            <div id="sandbox-formula" style="font-size: 1.25rem; margin: 0.75rem 0; overflow-x: auto;"></div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;" id="sandbox-decimal-val"></p>
+        </div>
+        <div id="sandbox-error" style="display: none; color: var(--error);">
+            <p style="font-weight: 700; font-size: 0.85rem;"><i class="fa-solid fa-triangle-exclamation"></i> Evaluation Error</p>
+            <p id="sandbox-error-text" style="font-size: 0.9rem; margin-top: 0.25rem; font-family: monospace;"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function runSandbox() {
+        const input = document.getElementById("sandbox-input").value.trim();
+        const btn = document.getElementById("sandbox-btn");
+        const block = document.getElementById("sandbox-output-block");
+        const loading = document.getElementById("sandbox-loading");
+        const success = document.getElementById("sandbox-success");
+        const error = document.getElementById("sandbox-error");
+        
+        if (!input) {
+            showToast("Please enter an equation or expression to test.", "warning");
+            return;
+        }
+        
+        block.style.display = "block";
+        loading.style.display = "block";
+        success.style.display = "none";
+        error.style.display = "none";
+        btn.disabled = true;
+        
+        try {
+            // Determine operation type
+            let endpoint = "/api/math/scientific";
+            let payload = { expression: input };
+            
+            if (input.includes("=") || input.includes("x") || input.includes("solve")) {
+                endpoint = "/api/math/algebra";
+                payload = { expression: input, options: { operation: "solve", variable: "x" } };
+            }
+            
+            if (input.includes("diff") || input.includes("integrate") || input.includes("limit")) {
+                endpoint = "/api/math/calculus";
+                let op = "derivative";
+                let cleanedInput = input;
+                if (input.includes("integrate")) {
+                    op = "integral";
+                    cleanedInput = input.replace("integrate(", "").replace(")", "");
+                    // Handle variable split
+                    if (cleanedInput.includes(",")) {
+                        cleanedInput = cleanedInput.split(",")[0];
+                    }
+                } else if (input.includes("diff")) {
+                    op = "derivative";
+                    cleanedInput = input.replace("diff(", "").replace(")", "");
+                    if (cleanedInput.includes(",")) {
+                        cleanedInput = cleanedInput.split(",")[0];
+                    }
+                } else if (input.includes("limit")) {
+                    op = "limit";
+                    cleanedInput = input.replace("limit(", "").replace(")", "");
+                    if (cleanedInput.includes(",")) {
+                        cleanedInput = cleanedInput.split(",")[0];
+                    }
+                }
+                
+                payload = { 
+                    expression: cleanedInput, 
+                    options: { operation: op, variable: "x" } 
+                };
+            }
+            
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            loading.style.display = "none";
+            
+            if (response.ok) {
+                success.style.display = "block";
+                const formulaDiv = document.getElementById("sandbox-formula");
+                const decimalP = document.getElementById("sandbox-decimal-val");
+                
+                if (data.latex) {
+                    formulaDiv.innerHTML = `$$${data.latex}$$`;
+                } else if (data.latex_solutions) {
+                    formulaDiv.innerHTML = `$$x \\in \\left\\{ ${data.latex_solutions.join(", ")} \\right\\}$$`;
+                } else if (data.result) {
+                    formulaDiv.innerHTML = `$$${data.result}$$`;
+                } else {
+                    formulaDiv.innerText = JSON.stringify(data);
+                }
+                
+                if (data.numeric_result !== undefined) {
+                    decimalP.innerText = `Numerical approximation: ${data.numeric_result}`;
+                } else {
+                    decimalP.innerText = "";
+                }
+                
+                renderMath();
+            } else {
+                error.style.display = "block";
+                document.getElementById("sandbox-error-text").innerText = data.detail || "Math parsing error.";
+            }
+        } catch (err) {
+            loading.style.display = "none";
+            error.style.display = "block";
+            document.getElementById("sandbox-error-text").innerText = "Failed to communicate with local server backend.";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

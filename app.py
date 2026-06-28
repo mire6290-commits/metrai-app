@@ -7,6 +7,23 @@ import os
 import threading
 import socket
 
+# Copy Streamlit secrets to environment variables so the backend can access them
+if hasattr(st, "secrets"):
+    try:
+        print("--- COPYING STREAMLIT SECRETS TO OS.ENVIRON ---")
+        for key in st.secrets.keys():
+            val = st.secrets[key]
+            if isinstance(val, dict) or str(type(val)) == "<class 'streamlit.runtime.secrets.AttrDict'>":
+                for sub_key in val.keys():
+                    os.environ[f"{key}_{sub_key}"] = str(val[sub_key])
+                    print(f"Copied secret key: {key}_{sub_key}")
+            else:
+                os.environ[key] = str(val)
+                print(f"Copied secret key: {key}")
+        print("--- COPYING COMPLETE ---")
+    except Exception as e:
+        print(f"Error copying Streamlit secrets to environment: {e}")
+
 sys.path.insert(0, os.path.abspath('backend'))
 
 def is_port_in_use(port: int) -> bool:
@@ -14,6 +31,17 @@ def is_port_in_use(port: int) -> bool:
         return s.connect_ex(('127.0.0.1', port)) == 0
 
 def run_uvicorn():
+    import importlib
+    import sys
+    
+    # Force reload all backend modules to bypass python module caching
+    to_reload = [k for k in sys.modules.keys() if k.startswith("backend")]
+    for m in to_reload:
+        try:
+            importlib.reload(sys.modules[m])
+        except Exception:
+            pass
+            
     import uvicorn
     from backend import main
     uvicorn.run(main.app, host="127.0.0.1", port=8000, log_level="error")
@@ -82,13 +110,29 @@ with st.sidebar:
     scale_hint = st.text_input("Scale Hint (Optional)", value="1:50")
     pages = st.text_input("Pages to Analyze", value="all", help="'all' or '1,2,3'")
     mode = st.selectbox("Extraction Mode", ["vision", "text", "hybrid"])
-    provider = st.selectbox("AI Provider", ["openai", "ollama", "openrouter", "gemini"])
+    provider = st.selectbox("AI Provider", ["gemini", "openai", "claude", "ollama", "openrouter"])
     detailed_mode = st.checkbox("🔍 Mode Plan Détaillé / Assemblage", value=False, help="Activez ceci pour extraire tous les détails et ignorer les contraintes de hangar standard (Recommandé pour Padel, Escabeaux, et assemblages complexes).")
     
     if st.button("🔄 Reset App State", help="Click this if the extraction button gets stuck."):
         st.session_state.extraction_result = None
         st.session_state.is_extracting = False
         st.rerun()
+
+    st.divider()
+    st.markdown("### 🔑 API Keys Status")
+    keys_to_check = {
+        "Gemini Key": "GEMINI_API_KEY",
+        "Claude Key": "ANTHROPIC_API_KEY",
+        "Ollama Proxy Key": "OLLAMA_API_KEY",
+        "OpenAI Key": "OPENAI_API_KEY",
+        "OpenRouter Key": "OPENROUTER_API_KEY"
+    }
+    for name, env_var in keys_to_check.items():
+        val = os.environ.get(env_var) or (hasattr(st, "secrets") and st.secrets.get(env_var))
+        if val and str(val).strip():
+            st.success(f"{name}: **Loaded** ✅")
+        else:
+            st.error(f"{name}: **Missing** ❌")
 
 uploaded_file = st.file_uploader("Upload Structural PDF Drawing 📄", type=['pdf'])
 

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Metrai Calculus{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 280px);
+        text-align: center;
+    }
+    .error-card {
+        max-width: 500px;
+        width: 100%;
+        padding: 3.5rem 2.5rem;
+    }
+    .error-code {
+        font-size: 5rem;
+        font-weight: 900;
+        font-family: 'Outfit';
+        background: linear-gradient(135deg, var(--error), var(--warning));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="glass-panel error-card">
+        <div class="error-code">{{ status_code }}</div>
+        <h2 style="font-family:'Outfit'; font-size:1.75rem; margin-bottom:1rem; color:var(--text-primary);">Something Went Wrong</h2>
+        <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.5; margin-bottom:2rem;">
+            {{ detail or "An unexpected issue was caught by our local python execution systems. Please try again." }}
+        </p>
+        <div style="display:flex; gap:1rem; justify-content:center;">
+            <a href="/" class="btn btn-primary"><i class="fa-solid fa-house"></i> Back to Safety</a>
+            <a href="/calculator" class="btn btn-secondary"><i class="fa-solid fa-calculator"></i> Solver Workspace</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -546,21 +546,18 @@ Your task:
 Output: full JSON schema above with pass = "PASS1"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PASS 2 — ACCESSORIES (cropped + upscaled detail image, DPI 300)
+PASS 2 — GENERAL EXTRACTION & ACCESSORIES (cropped + upscaled detail image, DPI 300)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PASS 2 — ACCESSORIES HUNTING.
-Tu vois UNE PORTION du plan général (pas un détail isolé).
-Cette portion peut contenir PLUSIEURS zones de détail (Dét.K, Dét.L,
-Coupe K-K, etc.) mélangées avec des éléments de structure générale.
+PASS 2 — GENERAL EXTRACTION & ACCESSORIES HUNTING.
+Tu vois UNE PORTION du plan général en haute résolution (DPI 300).
+Cette portion peut contenir des éléments de structure principale (poteaux, traverses, sablières, pannes, lisses, CVT, etc.) et des zones de détail/coupe (Dét.K, Dét.L, etc.) contenant des accessoires.
 
 Ton travail:
-  1. Ignore tous les éléments de structure principale
-     (poteaux, traverses, sablières, pannes)
-  2. Cherche et localise TOUS les cadres de détail visibles
-     dans cette portion (rectangles annotés "Dét.", "Det.", "Coupe")
-  3. Pour CHAQUE détail trouvé:
+  1. Extrais TOUS les éléments de structure visibles dans cette portion (à la fois la structure principale comme les poteaux, traverses, sablières, pannes, lisses, CVT, etc., et les accessoires comme les platines, goussets, échantignolles, tiges d'ancrage, etc.).
+  2. Lis toutes les annotations et étiquettes avec précision maximale (grâce à la haute résolution de cette portion).
+  3. Pour CHAQUE cadre de détail trouvé (rectangles annotés "Dét.", "Det.", "Coupe"):
      - Lis son label (Dét.K, Dét.L, etc.)
-     - Extrais TOUS les accessoires dedans
+     - Extrais TOUS les accessoires et profilés décrits dedans
      - Lis TOUTES les cotes (ep × larg × long) avec précision max
   4. Si une cote est illisible → confidence < 0.65, dims_mm = null
   5. Ne rien inventer — un null honnête vaut mieux qu'un faux chiffre
@@ -568,7 +565,7 @@ Ton travail:
 Output: JSON with pass = "PASS2"
         Only populate: views_identified, profiles[], verification{}
         Set building_dimensions all null (not visible at this scale)
-        Set summary based only on accessories found
+        Set summary based only on profiles found
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PASS 3 — MERGE & DEDUPLICATE

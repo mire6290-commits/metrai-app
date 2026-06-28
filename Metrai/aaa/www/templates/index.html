@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrai AI Elite Web</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div id="app-container">
+        <!-- HEADER -->
+        <header>
+            <div class="header-logo">METRAI AI ELITE</div>
+            <div class="header-sub">Automated local quantity takeoff & engineering rules engine (WEB APP)</div>
+        </header>
+
+        <!-- STEPPER -->
+        <div class="stepper-container">
+            <div class="step-box active" id="step1">1. Plan Ingestion</div>
+            <div class="step-box" id="step2">2. Vision & OCR local</div>
+            <div class="step-box" id="step3">3. Table de recalcul</div>
+            <div class="step-box" id="step4">4. Rapport & Exports</div>
+        </div>
+
+        <!-- UPLOAD SECTION -->
+        <section id="upload-section" class="card-glass active-section">
+            <h3>📂 Ingestion de votre Plan de Structure</h3>
+            <p>Glissez-déposez n'importe quel plan structural PDF (charpente métallique, plans d'exécution, fabrication, architecte).</p>
+            <div class="drop-zone" id="drop-zone">
+                <input type="file" id="pdf-upload" accept=".pdf" hidden>
+                <div class="drop-text">Cliquez ou déposez votre PDF ici</div>
+                <div id="file-name" style="margin-top: 10px; font-weight: bold; color: #ed7d31;"></div>
+            </div>
+            <button class="primary-btn" id="start-btn" style="margin-top: 20px; display: none;">🚀 DÉMARRER L'EXTRACTION INTELLIGENTE</button>
+        </section>
+
+        <!-- PROCESSING SECTION -->
+        <section id="processing-section" class="card-glass" style="display: none; text-align: center;">
+            <div class="gear-icon">⚙️</div>
+            <div class="laser-container"><div class="laser-beam"></div></div>
+            <div id="status-text" style="margin-top: 20px; font-weight: 600;">🧬 Initialisation de l'analyse spatiale haute définition...</div>
+        </section>
+
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard-section" class="card-glass" style="display: none;">
+            <h3>📋 RÉSULTATS DU MÉTRÉ</h3>
+            <div class="kpi-container" id="kpi-cards">
+                <div class="kpi-card">
+                    <div class="kpi-label">Poids Total Acier</div>
+                    <div class="kpi-val" id="kpi-weight">0 kg</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Tonnage Métrique</div>
+                    <div class="kpi-val" id="kpi-ton">0 T</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Surface Peinture</div>
+                    <div class="kpi-val" id="kpi-surface">0 m²</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Éléments Totaux</div>
+                    <div class="kpi-val" id="kpi-pieces">0 Pcs</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Profilé</th>
+                            <th>Qté</th>
+                            <th>Long (m)</th>
+                            <th>Type</th>
+                            <th>Localisation</th>
+                            <th>Poids (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button class="secondary-btn" id="back-btn" style="flex:1;">⬅️ RETOURNER AU CHARGEMENT</button>
+                <button class="primary-btn" id="export-btn" style="flex:1;">👉 CONFIRMER ET EXPORTER</button>
+            </div>
+        </section>
+        
+        <!-- EXPORTS SECTION -->
+        <section id="exports-section" class="card-glass" style="display: none; text-align: center;">
+             <h3>📤 Vos fichiers de métré structurel sont prêts !</h3>
+             <p>Sélectionnez le format professionnel requis ci-dessous :</p>
+             <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+                 <button class="primary-btn" id="download-excel-btn">📊 TÉLÉCHARGER EXCEL MÉTRÉ</button>
+                 <button class="secondary-btn" onclick="location.reload()">🔄 NOUVELLE EXTRACTION</button>
+             </div>
+        </section>
+
+    </div>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

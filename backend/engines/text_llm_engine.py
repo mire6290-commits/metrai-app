@@ -5,7 +5,7 @@ from typing import Any
 from pathlib import Path
 
 # We keep the same data schema
-from engines.vision_llm_engine import DetectedProfile, VisionResult
+from engines.vision_llm_engine import DetectedProfile, VisionResult, FatalAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +63,12 @@ class TextLLMEngine:
             providers_to_try.extend(["openrouter", "gemini"])
         elif primary == "openai":
             providers_to_try.extend(["gemini", "openrouter"])
+        elif primary == "claude":
+            providers_to_try.extend(["gemini", "openrouter"])
             
         raw_json = None
-        last_error = None
         used_provider = None
+        errors = []
 
         for prov in providers_to_try:
             try:
@@ -79,15 +81,21 @@ class TextLLMEngine:
                     raw_json = self._call_gemini_text(user_msg)
                 elif prov == "openai":
                     raw_json = self._call_openai_text(user_msg)
+                elif prov == "claude":
+                    raw_json = self._call_claude_text(user_msg)
                 used_provider = prov
                 logger.info(f"TextLLMEngine: Successfully extracted using {prov}")
                 break
             except Exception as e:
                 logger.warning(f"TextLLMEngine: Provider {prov} failed: {e}")
-                last_error = e
+                errors.append(f"{prov}: {str(e)}")
 
         if raw_json is None:
-            raise RuntimeError(f"All text LLM providers failed! Last error: {last_error}")
+            err_details = " | ".join(errors)
+            raise RuntimeError(
+                f"All text LLM providers failed! Details: {err_details}. "
+                f"Please verify your API keys. On Streamlit Cloud, add GEMINI_API_KEY to your app's Secrets."
+            )
             
         # Parse JSON
         if not raw_json or not isinstance(raw_json, str):
@@ -198,51 +206,70 @@ class TextLLMEngine:
             logger.error(f"Failed to parse JSON: {raw_json}")
             raise ValueError("LLM did not return valid JSON") from e
 
-    from tenacity import retry, stop_after_attempt, wait_exponential
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=2, max=6))
     def _call_ollama_text(self, user_msg: str) -> str:
-        api_key = os.getenv("OLLAMA_API_KEY")
-        if not api_key:
-            raise ValueError("OLLAMA_API_KEY not set")
-        api_key = api_key.strip()
+        # Fallback list of keys and models for the custom Ollama gateway
+        primary_key = os.getenv("OLLAMA_API_KEY", "").strip()
+        fallback_key = "31428a96e8c44f749c1250cd82d5215a.5E6NKd71YriTGNWrphElKQ2T"
+        
+        primary_model = os.getenv("OLLAMA_MODEL", "gemini-3-flash-preview").strip()
+        fallback_models = ["gemini-3-flash-preview", "deepseek-v4-flash", "gemma3:12b"]
+        
+        keys_to_try = [primary_key] if primary_key else []
+        if fallback_key not in keys_to_try:
+            keys_to_try.append(fallback_key)
+            
+        models_to_try = [primary_model]
+        for m in fallback_models:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
         import requests
-        model = os.getenv("OLLAMA_MODEL", "qwen3-vl:235b-instruct")
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "model": model,
-            "stream": False,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": SYSTEM_PROMPT + "\n\n" + user_msg
+        
+        last_error = None
+        for key in keys_to_try:
+            for model in models_to_try:
+                headers = {
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json"
                 }
-            ]
-        }
+                payload = {
+                    "model": model,
+                    "stream": False,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": SYSTEM_PROMPT + "\n\n" + user_msg
+                        }
+                    ]
+                }
+                
+                logger.info(f"Trying Ollama Text API with key ending in ...{key[-6:]} and model {model}...")
+                try:
+                    resp = requests.post(
+                        "https://ollama.com/api/chat",
+                        headers=headers,
+                        json=payload,
+                        timeout=(30, 240)
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if "message" in data and "content" in data["message"]:
+                            raw_json = data["message"]["content"]
+                            raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                            return raw_json
+                    
+                    last_error = f"{resp.status_code} - {resp.text[:200]}"
+                    logger.warning(f"Ollama text key ...{key[-6:]} / model {model} failed: {last_error}")
+                except Exception as e:
+                    last_error = str(e)
+                    logger.warning(f"Ollama text request error: {e}")
+                    
+        raise ValueError(f"All Ollama text keys/models failed. Last error: {last_error}")
 
-        logger.info(f"Sending text request to Ollama API (model: {model})...")
-        resp = requests.post(
-            "https://ollama.com/api/chat",
-            headers=headers,
-            json=payload,
-            timeout=(30, 240)
-        )
-
-        if not resp.ok:
-            raise ValueError(f"Ollama API error: {resp.status_code} - {resp.text[:300]}")
-
-        data = resp.json()
-        raw_json = data["message"]["content"]
-        raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        return raw_json
-
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini_text(self, user_msg: str) -> str:
         import requests
         from engines.api_keys import get_random_gemini_key
@@ -265,7 +292,10 @@ class TextLLMEngine:
         
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=300)
         if not resp.ok:
-            logger.error(f"Gemini API failed: {resp.status_code} {resp.text}")
+            error_msg = f"Gemini API failed: {resp.status_code} {resp.text}"
+            logger.error(error_msg)
+            if resp.status_code in (400, 403) or "blocked" in resp.text.lower() or 'quota_limit_value: "0"' in resp.text or 'quota_limit_value: \\"0\\"' in resp.text:
+                raise FatalAPIError(error_msg)
             resp.raise_for_status()
             
         data = resp.json()
@@ -273,7 +303,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openrouter_text(self, user_msg: str) -> str:
         import requests, os
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -290,6 +320,8 @@ class TextLLMEngine:
         if not resp.ok:
             error_msg = f"OpenRouter API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 402, 403) or "quota" in resp.text.lower() or "credits" in resp.text.lower() or "limit exceeded" in resp.text.lower():
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         if "choices" not in data or not data["choices"]:
@@ -298,7 +330,7 @@ class TextLLMEngine:
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
 
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openai_text(self, user_msg: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -336,6 +368,8 @@ class TextLLMEngine:
         if not resp.ok:
             error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 403) or (resp.status_code == 429 and ("quota" in resp.text.lower() or "billing" in resp.text.lower() or "exceeded" in resp.text.lower())):
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
             
         data = resp.json()
@@ -345,3 +379,36 @@ class TextLLMEngine:
         raw_json = data["choices"][0]["message"]["content"]
         raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         return raw_json
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
+    def _call_claude_text(self, user_msg: str) -> str:
+        import anthropic
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        logger.info(f"Sending text to Anthropic Claude API (model: {model})...")
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model=model,
+                max_tokens=4000,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_msg}],
+            )
+            raw_json = response.content[0].text
+            raw_json = raw_json.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            return raw_json
+        except anthropic.APIStatusError as e:
+            error_msg = f"Anthropic Claude API failed: {e.status_code} - {e.message}"
+            logger.error(error_msg)
+            if e.status_code == 400 and ("credit" in e.message.lower() or "balance" in e.message.lower()):
+                raise FatalAPIError(error_msg)
+            if e.status_code in (401, 403):
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Anthropic Claude error: {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)

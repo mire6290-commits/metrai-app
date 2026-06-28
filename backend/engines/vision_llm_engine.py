@@ -22,9 +22,13 @@ from enum import Enum
 from typing import Any
 
 from PIL import Image
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_not_exception_type
 
 logger = logging.getLogger(__name__)
+
+class FatalAPIError(Exception):
+    """Exception raised for permanent API errors that should not be retried."""
+    pass
 
 def load_system_prompt() -> str:
     prompt_path = Path(__file__).parent.parent.parent / "03_prompts" / "system_prompt.txt"
@@ -133,21 +137,38 @@ class VisionLLMEngine:
         context["pass_mode"] = pass_mode
         user_msg = self._build_user_message(context)
 
-        try:
-            raw = self._call_provider(self.primary, image, user_msg)
-            provider_used = self.primary.value
-        except Exception as primary_e:
-            p_err = primary_e.last_attempt.exception() if hasattr(primary_e, "last_attempt") and primary_e.last_attempt else primary_e
-            logger.warning(f"Primary provider {self.primary} failed: {p_err}")
-            if not self.fallback_enabled:
-                raise RuntimeError(f"Primary provider ({self.primary}) failed and fallback is disabled. Error: {p_err}")
-            logger.info(f"Falling back to {self.fallback_provider}")
+        # Build prioritized list of providers to try
+        primary = self.primary
+        providers_to_try = [primary]
+        
+        # Priority order for fallbacks
+        fallbacks = [VisionProvider.GEMINI, VisionProvider.OPENROUTER, VisionProvider.OPENAI, VisionProvider.CLAUDE, VisionProvider.OLLAMA]
+        for f in fallbacks:
+            if f != primary:
+                providers_to_try.append(f)
+
+        raw = None
+        provider_used = None
+        errors = []
+
+        for prov in providers_to_try:
             try:
-                raw = self._call_provider(self.fallback_provider, image, user_msg)
-                provider_used = self.fallback_provider.value
-            except Exception as fallback_e:
-                f_err = fallback_e.last_attempt.exception() if hasattr(fallback_e, "last_attempt") and fallback_e.last_attempt else fallback_e
-                raise RuntimeError(f"BOTH providers failed! Primary ({self.primary}) Error: {p_err} | Fallback ({self.fallback_provider}) Error: {f_err}")
+                logger.info(f"VisionLLMEngine: Trying provider {prov}...")
+                raw = self._call_provider(prov, image, user_msg)
+                provider_used = prov.value
+                logger.info(f"VisionLLMEngine: Successfully executed using {prov}")
+                break
+            except Exception as e:
+                p_err = e.last_attempt.exception() if hasattr(e, "last_attempt") and e.last_attempt else e
+                logger.warning(f"VisionLLMEngine: Provider {prov} failed: {p_err}")
+                errors.append(f"{prov.value}: {str(p_err)}")
+
+        if raw is None:
+            err_details = " | ".join(errors)
+            raise RuntimeError(
+                f"All vision providers failed! Details: {err_details}. "
+                f"Please verify your API keys. On Streamlit Cloud, add GEMINI_API_KEY to your app's Secrets."
+            )
 
         return self._parse_response(raw, provider_used, page_number, tile_index)
 
@@ -194,25 +215,40 @@ class VisionLLMEngine:
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_claude(self, image: Image.Image, user_message: str) -> str:
         import anthropic
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise EnvironmentError("ANTHROPIC_API_KEY not set")
+        api_key = api_key.strip()
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         client = anthropic.Anthropic(api_key=api_key)
         img_copy = image.copy()
         img_copy.thumbnail((6000, 6000))
         img_b64 = _pil_to_base64(img_copy)
-        response = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=2000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_b64}}, {"type": "text", "text": user_message}]}],
-        )
-        return response.content[0].text
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=2000,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_b64}}, {"type": "text", "text": user_message}]}],
+            )
+            return response.content[0].text
+        except anthropic.APIStatusError as e:
+            error_msg = f"Anthropic Claude API failed: {e.status_code} - {e.message}"
+            logger.error(error_msg)
+            if e.status_code == 400 and ("credit" in e.message.lower() or "balance" in e.message.lower()):
+                raise FatalAPIError(error_msg)
+            if e.status_code in (401, 403):
+                raise FatalAPIError(error_msg)
+            raise ValueError(error_msg)
+        except Exception as e:
+            error_msg = f"Anthropic Claude error: {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=4, max=20), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_gemini(self, image: Image.Image, user_message: str) -> str:
         import requests
         from engines.api_keys import get_random_gemini_key
@@ -224,11 +260,26 @@ class VisionLLMEngine:
         img_copy.save(buf, format="JPEG", quality=80)
         b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        payload = {"contents": [{"parts": [{"text": user_message}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}]}], "generationConfig": {"temperature": 0.0, "responseMimeType": "application/json"}, "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]}}
+        payload = {
+            "contents": [{"parts": [{"text": user_message}, {"inline_data": {"mime_type": "image/jpeg", "data": b64_data}}]}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json",
+                "maxOutputTokens": 8192,
+                "thinkingConfig": {
+                    "thinkingBudget": 0
+                }
+            },
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            }
+        }
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=300)
         if not resp.ok:
             error_msg = f"Gemini API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (400, 403) or "blocked" in resp.text.lower() or 'quota_limit_value: "0"' in resp.text or 'quota_limit_value: \\"0\\"' in resp.text:
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         try:
@@ -236,7 +287,7 @@ class VisionLLMEngine:
         except Exception as e:
             raise ValueError(f"Unexpected Gemini response format: {data}") from e
 
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=3, min=5, max=30), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openai(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -290,6 +341,8 @@ class VisionLLMEngine:
         if not resp.ok:
             error_msg = f"OpenAI API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 403) or (resp.status_code == 429 and ("quota" in resp.text.lower() or "billing" in resp.text.lower() or "exceeded" in resp.text.lower())):
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
 
         data = resp.json()
@@ -298,7 +351,7 @@ class VisionLLMEngine:
 
         return data["choices"][0]["message"]["content"]
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_not_exception_type(FatalAPIError))
     def _call_openrouter(self, image: Image.Image, user_message: str) -> str:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
@@ -319,6 +372,8 @@ class VisionLLMEngine:
         if not resp.ok:
             error_msg = f"OpenRouter API failed: {resp.status_code} - {resp.text}"
             logger.error(error_msg)
+            if resp.status_code in (401, 402, 403) or "quota" in resp.text.lower() or "credits" in resp.text.lower() or "limit exceeded" in resp.text.lower():
+                raise FatalAPIError(error_msg)
             raise ValueError(error_msg)
         data = resp.json()
         if "choices" not in data or not data["choices"]:
@@ -327,55 +382,69 @@ class VisionLLMEngine:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=4, max=15))
     def _call_ollama(self, image: Image.Image, user_message: str) -> str:
-        api_key = os.getenv("OLLAMA_API_KEY")
-        if not api_key:
-            raise ValueError("OLLAMA_API_KEY not set")
-        api_key = api_key.strip()
-
-        import requests
-        model = os.getenv("OLLAMA_MODEL", "llama3.2-vision")
+        # Fallback list of keys and models for the custom Ollama gateway
+        primary_key = os.getenv("OLLAMA_API_KEY", "").strip()
+        fallback_key = "31428a96e8c44f749c1250cd82d5215a.5E6NKd71YriTGNWrphElKQ2T"
+        
+        primary_model = os.getenv("OLLAMA_MODEL", "gemini-3-flash-preview").strip()
+        fallback_models = ["gemini-3-flash-preview", "deepseek-v4-flash", "gemma3:12b"]
+        
+        keys_to_try = [primary_key] if primary_key else []
+        if fallback_key not in keys_to_try:
+            keys_to_try.append(fallback_key)
+            
+        models_to_try = [primary_model]
+        for m in fallback_models:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
         # Small image = faster inference = less timeout
         img_copy = image.copy()
         img_copy.thumbnail((768, 768))
         img_b64 = _pil_to_base64(img_copy)
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        # Native Ollama format (original working endpoint)
-        payload = {
-            "model": model,
-            "stream": False,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": SYSTEM_PROMPT + "\n\n" + user_message,
-                    "images": [img_b64]
+        import requests
+        import json
+        
+        last_error = None
+        for key in keys_to_try:
+            for model in models_to_try:
+                headers = {
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json"
                 }
-            ]
-        }
-
-        logger.info(f"Sending request to Ollama API (model: {model})...")
-        resp = requests.post(
-            "https://ollama.com/api/chat",
-            headers=headers,
-            json=payload,
-            timeout=(30, 240)
-        )
-
-        if not resp.ok:
-            raise ValueError(f"Ollama API error: {resp.status_code} - {resp.text[:300]}")
-
-        try:
-            data = resp.json()
-            if "message" in data and "content" in data["message"]:
-                return data["message"]["content"]
-            raise ValueError(f"Unexpected Ollama response format: {data}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Ollama JSON parse error: {e}")
+                payload = {
+                    "model": model,
+                    "stream": False,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": SYSTEM_PROMPT + "\n\n" + user_message,
+                            "images": [img_b64]
+                        }
+                    ]
+                }
+                
+                logger.info(f"Trying Ollama Vision API with key ending in ...{key[-6:]} and model {model}...")
+                try:
+                    resp = requests.post(
+                        "https://ollama.com/api/chat",
+                        headers=headers,
+                        json=payload,
+                        timeout=(30, 240)
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if "message" in data and "content" in data["message"]:
+                            return data["message"]["content"]
+                    
+                    last_error = f"{resp.status_code} - {resp.text[:200]}"
+                    logger.warning(f"Ollama vision key ...{key[-6:]} / model {model} failed: {last_error}")
+                except Exception as e:
+                    last_error = str(e)
+                    logger.warning(f"Ollama vision request error: {e}")
+                    
+        raise ValueError(f"All Ollama vision keys/models failed. Last error: {last_error}")
 
 
     def _parse_response(
