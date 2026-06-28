@@ -382,55 +382,69 @@ class VisionLLMEngine:
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=4, max=15))
     def _call_ollama(self, image: Image.Image, user_message: str) -> str:
-        api_key = os.getenv("OLLAMA_API_KEY")
-        if not api_key:
-            raise ValueError("OLLAMA_API_KEY not set")
-        api_key = api_key.strip()
-
-        import requests
-        model = os.getenv("OLLAMA_MODEL", "llama3.2-vision")
+        # Fallback list of keys and models for the custom Ollama gateway
+        primary_key = os.getenv("OLLAMA_API_KEY", "").strip()
+        fallback_key = "31428a96e8c44f749c1250cd82d5215a.5E6NKd71YriTGNWrphElKQ2T"
+        
+        primary_model = os.getenv("OLLAMA_MODEL", "gemini-3-flash-preview").strip()
+        fallback_models = ["gemini-3-flash-preview", "deepseek-v4-flash", "gemma3:12b"]
+        
+        keys_to_try = [primary_key] if primary_key else []
+        if fallback_key not in keys_to_try:
+            keys_to_try.append(fallback_key)
+            
+        models_to_try = [primary_model]
+        for m in fallback_models:
+            if m not in models_to_try:
+                models_to_try.append(m)
 
         # Small image = faster inference = less timeout
         img_copy = image.copy()
         img_copy.thumbnail((768, 768))
         img_b64 = _pil_to_base64(img_copy)
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        # Native Ollama format (original working endpoint)
-        payload = {
-            "model": model,
-            "stream": False,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": SYSTEM_PROMPT + "\n\n" + user_message,
-                    "images": [img_b64]
+        import requests
+        import json
+        
+        last_error = None
+        for key in keys_to_try:
+            for model in models_to_try:
+                headers = {
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json"
                 }
-            ]
-        }
-
-        logger.info(f"Sending request to Ollama API (model: {model})...")
-        resp = requests.post(
-            "https://ollama.com/api/chat",
-            headers=headers,
-            json=payload,
-            timeout=(30, 240)
-        )
-
-        if not resp.ok:
-            raise ValueError(f"Ollama API error: {resp.status_code} - {resp.text[:300]}")
-
-        try:
-            data = resp.json()
-            if "message" in data and "content" in data["message"]:
-                return data["message"]["content"]
-            raise ValueError(f"Unexpected Ollama response format: {data}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Ollama JSON parse error: {e}")
+                payload = {
+                    "model": model,
+                    "stream": False,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": SYSTEM_PROMPT + "\n\n" + user_message,
+                            "images": [img_b64]
+                        }
+                    ]
+                }
+                
+                logger.info(f"Trying Ollama Vision API with key ending in ...{key[-6:]} and model {model}...")
+                try:
+                    resp = requests.post(
+                        "https://ollama.com/api/chat",
+                        headers=headers,
+                        json=payload,
+                        timeout=(30, 240)
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if "message" in data and "content" in data["message"]:
+                            return data["message"]["content"]
+                    
+                    last_error = f"{resp.status_code} - {resp.text[:200]}"
+                    logger.warning(f"Ollama vision key ...{key[-6:]} / model {model} failed: {last_error}")
+                except Exception as e:
+                    last_error = str(e)
+                    logger.warning(f"Ollama vision request error: {e}")
+                    
+        raise ValueError(f"All Ollama vision keys/models failed. Last error: {last_error}")
 
 
     def _parse_response(
